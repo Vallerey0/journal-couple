@@ -31,10 +31,8 @@ function normalizeJakartaTimestamptz(raw: string | null) {
   const v = (raw ?? "").trim();
   if (!v) return null;
 
-  // sudah ada offset atau Z
   if (/[zZ]$/.test(v) || /[+-]\d{2}:\d{2}$/.test(v)) return v;
 
-  // bentuk datetime-local (tanpa detik)
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
     return `${v}:00+07:00`;
   }
@@ -102,7 +100,6 @@ export async function updatePlanAction(formData: FormData): Promise<void> {
   if (price_idr < 0) throw new Error("Harga tidak valid.");
   if (duration_days <= 0) throw new Error("Durasi harus > 0.");
 
-  // code TIDAK diubah (stabil), karena code dipakai sistem
   const { error } = await supabase
     .from("subscription_plans")
     .update({
@@ -138,6 +135,36 @@ export async function togglePlanActiveAction(
   revalidatePath("/admin/subscriptions");
 }
 
+/**
+ * ✅ helper: sync pivot promotion_plans agar sama persis dengan selectedPlanIds
+ */
+async function syncPromotionPlans(
+  supabase: any,
+  promotionId: string,
+  selectedPlanIds: string[]
+) {
+  // bersihkan dulu
+  const { error: delErr } = await supabase
+    .from("promotion_plans")
+    .delete()
+    .eq("promotion_id", promotionId);
+
+  if (delErr) throw new Error(delErr.message);
+
+  // insert ulang
+  if (selectedPlanIds.length > 0) {
+    const rows = selectedPlanIds.map((plan_id) => ({
+      promotion_id: promotionId,
+      plan_id,
+    }));
+
+    const { error: insErr } = await supabase
+      .from("promotion_plans")
+      .insert(rows);
+    if (insErr) throw new Error(insErr.message);
+  }
+}
+
 export async function createPromotionAction(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
@@ -159,13 +186,17 @@ export async function createPromotionAction(formData: FormData): Promise<void> {
   const max_redemptions =
     max_redemptions_raw === "" ? null : Number(max_redemptions_raw);
 
-  const applies_to_all_plans = toBool(formData.get("applies_to_all_plans"));
+  // ✅ sekarang wajib plan picker
   const planIds = formData.getAll("plan_id").map((x) => String(x));
 
   if (!name) throw new Error("Nama promo wajib.");
   if (!(discount_percent >= 1 && discount_percent <= 100))
     throw new Error("Diskon harus 1-100%.");
   if (!start_at) throw new Error("Start wajib.");
+
+  if (planIds.length === 0) {
+    throw new Error("Pilih minimal 1 plan untuk promo ini.");
+  }
 
   if (
     max_redemptions !== null &&
@@ -182,10 +213,6 @@ export async function createPromotionAction(formData: FormData): Promise<void> {
     }
   }
 
-  if (!applies_to_all_plans && planIds.length === 0) {
-    throw new Error("Pilih minimal 1 plan (atau centang 'Semua plan').");
-  }
-
   const { data: promo, error: promoErr } = await supabase
     .from("promotions")
     .insert({
@@ -200,7 +227,6 @@ export async function createPromotionAction(formData: FormData): Promise<void> {
       new_customer_only,
       max_redemptions,
       max_redemptions_per_user: 1,
-      applies_to_all_plans,
     })
     .select("id")
     .maybeSingle();
@@ -208,18 +234,7 @@ export async function createPromotionAction(formData: FormData): Promise<void> {
   if (promoErr) throw new Error(promoErr.message);
   if (!promo?.id) throw new Error("Gagal membuat promo.");
 
-  if (!applies_to_all_plans) {
-    const rows = planIds.map((plan_id) => ({
-      promotion_id: promo.id,
-      plan_id,
-    }));
-
-    const { error: pivErr } = await supabase
-      .from("promotion_plans")
-      .insert(rows);
-
-    if (pivErr) throw new Error(pivErr.message);
-  }
+  await syncPromotionPlans(supabase, promo.id, planIds);
 
   revalidatePath("/admin/subscriptions");
 }
@@ -227,11 +242,8 @@ export async function createPromotionAction(formData: FormData): Promise<void> {
 /**
  * ✅ Update promo (aktif) dengan safety rule:
  * - Kalau promo SUDAH dipakai (ada redemption) => hanya boleh edit:
- *   name, description, end_at (untuk stop cepat / extend)
- * - Kalau belum dipakai => boleh edit field inti juga
- *
- * Catatan: pivot plan tidak kita edit dulu (biar simpel & aman).
- * Kalau perlu, nanti kita buat editor khusus pivot.
+ *   name, description, end_at
+ * - Kalau belum dipakai => boleh edit field inti + sync pivot plan
  */
 export async function updatePromotionAction(formData: FormData): Promise<void> {
   const supabase = await createClient();
@@ -239,11 +251,10 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
   const id = toStr(formData.get("id"));
   if (!id) throw new Error("ID promo kosong.");
 
-  // ambil promo existing
   const { data: existing, error: exErr } = await supabase
     .from("promotions")
     .select(
-      "id, name, description, code, discount_percent, start_at, end_at, new_customer_only, max_redemptions, applies_to_all_plans, archived_at"
+      "id, name, description, code, discount_percent, start_at, end_at, new_customer_only, max_redemptions, archived_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -254,17 +265,12 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
     throw new Error("Promo sudah di-archive (read-only).");
 
   // cek apakah sudah pernah dipakai
-  // NOTE: tabel ini akan kita pakai juga di flow payment
   const { count: usedCount, error: cntErr } = await supabase
     .from("promotion_redemptions")
     .select("id", { count: "exact", head: true })
     .eq("promotion_id", id);
 
-  if (cntErr) {
-    // kalau tabel belum ada, anggap belum dipakai (sementara)
-    // tapi saat payment live nanti tabel pasti ada
-  }
-
+  if (cntErr) throw new Error(cntErr.message);
   const used = (usedCount ?? 0) > 0;
 
   // input baru
@@ -274,7 +280,7 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
   const end_at =
     normalizeJakartaTimestamptz(toStr(formData.get("end_at"))) || null;
 
-  // field inti (hanya berlaku kalau belum dipakai)
+  // field inti (hanya kalau belum dipakai)
   const codeRaw = toStr(formData.get("code"));
   const code = codeRaw ? codeRaw.toUpperCase() : null;
 
@@ -284,6 +290,9 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
   const max_redemptions_raw = toStr(formData.get("max_redemptions"));
   const max_redemptions =
     max_redemptions_raw === "" ? null : Number(max_redemptions_raw);
+
+  // ✅ plan picker edit
+  const planIds = formData.getAll("plan_id").map((x) => String(x));
 
   if (!name) throw new Error("Nama promo wajib.");
 
@@ -296,8 +305,7 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
   }
 
   if (used) {
-    // 🔒 locked fields
-    // hanya name/description/end_at
+    // 🔒 locked fields + pivot dikunci
     const { error } = await supabase
       .from("promotions")
       .update({
@@ -324,6 +332,10 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
     throw new Error("Kuota (max redemptions) tidak valid.");
   }
 
+  if (planIds.length === 0) {
+    throw new Error("Pilih minimal 1 plan untuk promo ini.");
+  }
+
   const { error } = await supabase
     .from("promotions")
     .update({
@@ -338,6 +350,9 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
     .eq("id", id);
 
   if (error) throw new Error(error.message);
+
+  // ✅ sync pivot
+  await syncPromotionPlans(supabase, id, planIds);
 
   revalidatePath("/admin/subscriptions");
 }

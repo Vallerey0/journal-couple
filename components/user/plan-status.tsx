@@ -5,9 +5,11 @@ import type { PlanView } from "@/lib/plan";
 export function PlanStatus({
   view,
   note,
+  planName,
 }: {
   view: PlanView;
   note: string;
+  planName?: string | null;
 }) {
   const styles =
     view === "premium"
@@ -17,7 +19,13 @@ export function PlanStatus({
       : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
 
   const label =
-    view === "premium" ? "PREMIUM" : view === "trial" ? "TRIAL" : "EXPIRED";
+    view === "premium"
+      ? planName
+        ? `PREMIUM • ${planName}`
+        : "PREMIUM"
+      : view === "trial"
+      ? "TRIAL"
+      : "EXPIRED";
 
   return (
     <Link

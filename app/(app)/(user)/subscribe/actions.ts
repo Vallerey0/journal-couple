@@ -2,214 +2,225 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-
-type ApplyResult = {
-  basePrice: number;
-  discountPercentApplied: number;
-  finalPrice: number;
-  promotionId: string | null;
-  note?: string;
-};
-
-function toInt(v: FormDataEntryValue | null, fallback = 0) {
-  const n = Number(String(v ?? ""));
-  return Number.isFinite(n) ? n : fallback;
-}
+import { createAdminClient } from "@/utils/supabase/admin";
 
 function toStr(v: FormDataEntryValue | null) {
   return String(v ?? "").trim();
 }
 
-function clamp(n: number, min: number, max: number) {
+function clampInt(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-async function isNewCustomer(supabase: any, userId: string) {
-  // definisi user baru: belum pernah subscription berbayar
-  // sementara: cek dari profiles.subscription_status
-  const { data: p } = await supabase
-    .from("profiles")
-    .select("subscription_status")
-    .eq("id", userId)
-    .maybeSingle();
-
-  return (p?.subscription_status ?? "inactive") !== "active";
+function isActiveWindow(startAt: string | null, endAt: string | null) {
+  const now = Date.now();
+  const s = startAt ? new Date(startAt).getTime() : null;
+  const e = endAt ? new Date(endAt).getTime() : null;
+  if (s && s > now) return false;
+  if (e && e <= now) return false;
+  return true;
 }
 
-async function getValidPromotionForCheckout(opts: {
-  supabase: any;
-  userId: string;
-  couponCode?: string;
-  planId: string;
-}) {
-  const { supabase, userId, couponCode, planId } = opts;
+type PromoRow = {
+  id: string;
+  code: string | null;
+  discount_percent: number;
+  start_at: string | null;
+  end_at: string | null;
+  is_active: boolean;
+  archived_at: string | null;
+  new_customer_only: boolean;
+  max_redemptions: number | null;
+  max_redemptions_per_user: number | null;
+};
 
-  // promo hanya yang archived_at IS NULL dan start/end valid
-  // kalau couponCode ada: cari by code
-  const nowIso = new Date().toISOString();
+async function isNewCustomer(admin: any, userId: string) {
+  const [{ count: paidCount }, { count: subCount }] = await Promise.all([
+    admin
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "paid"),
+    admin
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
 
-  let query = supabase
+  return (paidCount ?? 0) === 0 && (subCount ?? 0) === 0;
+}
+
+async function promoApplicableToPlan(
+  admin: any,
+  promoId: string,
+  planId: string
+) {
+  const { data } = await admin
+    .from("promotion_plans")
+    .select("promotion_id, plan_id")
+    .eq("promotion_id", promoId)
+    .eq("plan_id", planId)
+    .maybeSingle();
+
+  return !!data;
+}
+
+async function canRedeemPromo(admin: any, promo: PromoRow, userId: string) {
+  if (promo.max_redemptions) {
+    const { count } = await admin
+      .from("promotion_redemptions")
+      .select("id", { count: "exact", head: true })
+      .eq("promotion_id", promo.id);
+
+    if ((count ?? 0) >= promo.max_redemptions) return false;
+  }
+
+  const perUserLimit = promo.max_redemptions_per_user ?? 1;
+  if (perUserLimit > 0) {
+    const { count } = await admin
+      .from("promotion_redemptions")
+      .select("id", { count: "exact", head: true })
+      .eq("promotion_id", promo.id)
+      .eq("user_id", userId);
+
+    if ((count ?? 0) >= perUserLimit) return false;
+  }
+
+  return true;
+}
+
+async function pickBestAutoNewCustomerPromo(
+  admin: any,
+  planId: string,
+  userId: string
+): Promise<PromoRow | null> {
+  // NOTE: karena applies_to_all_plans sudah dihapus, maka promo berlaku
+  // hanya jika ada pivot di promotion_plans.
+  const { data: promos } = await admin
     .from("promotions")
     .select(
-      "id, code, discount_percent, start_at, end_at, new_customer_only, max_redemptions, max_redemptions_per_user, applies_to_all_plans"
+      "id, code, discount_percent, start_at, end_at, is_active, archived_at, new_customer_only, max_redemptions, max_redemptions_per_user"
     )
+    .eq("is_active", true)
     .is("archived_at", null)
-    .lte("start_at", nowIso);
+    .eq("new_customer_only", true);
 
-  // end_at null = unlimited
-  query = query.or(`end_at.is.null,end_at.gte.${nowIso}`);
+  const list = (promos ?? [])
+    .filter((p: any) => isActiveWindow(p.start_at, p.end_at))
+    .sort(
+      (a: any, b: any) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0)
+    ) as PromoRow[];
 
-  if (couponCode) {
-    query = query.eq("code", couponCode.toUpperCase());
-  } else {
-    // tanpa kupon: boleh pilih promo auto (code null)
-    query = query.is("code", null);
+  for (const p of list) {
+    const okPlan = await promoApplicableToPlan(admin, p.id, planId);
+    if (!okPlan) continue;
+
+    const okQuota = await canRedeemPromo(admin, p, userId);
+    if (!okQuota) continue;
+
+    return p;
   }
 
-  // ambil promo terbaru dulu (biar predictable)
-  const { data: promo, error } = await query
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!promo) return null;
-
-  // cek plan eligibility kalau tidak applies_to_all_plans
-  if (!promo.applies_to_all_plans) {
-    const { data: piv, error: pivErr } = await supabase
-      .from("promotion_plans")
-      .select("plan_id")
-      .eq("promotion_id", promo.id)
-      .eq("plan_id", planId)
-      .maybeSingle();
-
-    if (pivErr) throw pivErr;
-    if (!piv) return null;
-  }
-
-  // cek new_customer_only
-  if (promo.new_customer_only) {
-    const ok = await isNewCustomer(supabase, userId);
-    if (!ok) return null;
-  }
-
-  // NOTE: kuota & per-user redemption akan kita enforce penuh setelah webhook + tabel promotion_redemptions ready.
-  // Untuk sekarang (pre-payment) kita hanya lakukan soft check jika table promotion_redemptions sudah ada.
-  // Kalau belum ada, skip biar tidak ngeblok.
-  try {
-    if (promo.max_redemptions) {
-      const { count } = await supabase
-        .from("promotion_redemptions")
-        .select("id", { count: "exact", head: true })
-        .eq("promotion_id", promo.id);
-
-      if ((count ?? 0) >= promo.max_redemptions) return null;
-    }
-
-    if (promo.max_redemptions_per_user) {
-      const { count } = await supabase
-        .from("promotion_redemptions")
-        .select("id", { count: "exact", head: true })
-        .eq("promotion_id", promo.id)
-        .eq("user_id", userId);
-
-      if ((count ?? 0) >= promo.max_redemptions_per_user) return null;
-    }
-  } catch {
-    // table belum ada -> skip
-  }
-
-  return promo as {
-    id: string;
-    discount_percent: number;
-  };
+  return null;
 }
 
-async function computePricing(opts: {
-  supabase: any;
-  userId: string;
-  planId: string;
-  couponCode?: string;
-}): Promise<ApplyResult> {
-  const { supabase, userId, planId, couponCode } = opts;
+async function getPromoByCoupon(
+  admin: any,
+  coupon: string,
+  planId: string,
+  userId: string,
+  isNew: boolean
+): Promise<PromoRow | null> {
+  const { data } = await admin
+    .from("promotions")
+    .select(
+      "id, code, discount_percent, start_at, end_at, is_active, archived_at, new_customer_only, max_redemptions, max_redemptions_per_user"
+    )
+    .eq("code", coupon)
+    .maybeSingle();
 
-  const { data: plan, error: planErr } = await supabase
+  if (!data) return null;
+  const p = data as PromoRow;
+
+  if (!p.is_active) return null;
+  if (p.archived_at) return null;
+  if (!isActiveWindow(p.start_at, p.end_at)) return null;
+  if (p.new_customer_only && !isNew) return null;
+
+  const okPlan = await promoApplicableToPlan(admin, p.id, planId);
+  if (!okPlan) return null;
+
+  const okQuota = await canRedeemPromo(admin, p, userId);
+  if (!okQuota) return null;
+
+  return p;
+}
+
+export async function createCheckoutIntentAction(formData: FormData) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) redirect("/login?next=/subscribe");
+
+  const planId = toStr(formData.get("plan_id"));
+  const couponRaw = toStr(formData.get("coupon"));
+  const coupon = couponRaw ? couponRaw.toUpperCase() : "";
+
+  if (!planId) redirect("/subscribe?error=plan_required");
+
+  const admin = createAdminClient();
+
+  // 1) plan aktif
+  const { data: plan, error: planErr } = await admin
     .from("subscription_plans")
-    .select("id, name, price_idr, duration_days, is_active")
+    .select("id, price_idr, is_active")
     .eq("id", planId)
     .maybeSingle();
 
-  if (planErr) throw planErr;
-  if (!plan || !plan.is_active)
-    throw new Error("Plan tidak valid / tidak aktif.");
+  if (planErr || !plan || !plan.is_active) {
+    redirect("/subscribe?error=plan_invalid");
+  }
 
-  const basePrice = plan.price_idr as number;
+  const basePrice = Number(plan.price_idr ?? 0);
 
-  const promo = await getValidPromotionForCheckout({
-    supabase,
-    userId,
-    couponCode: couponCode || undefined,
-    planId,
-  });
+  // 2) user baru?
+  const isNew = await isNewCustomer(admin, userId);
 
-  const discountPercentApplied = promo
-    ? clamp(promo.discount_percent, 0, 100)
+  // 3) promo prioritas: coupon > auto new customer
+  let promo: PromoRow | null = null;
+  if (coupon) {
+    promo = await getPromoByCoupon(admin, coupon, planId, userId, isNew);
+  } else if (isNew) {
+    promo = await pickBestAutoNewCustomerPromo(admin, planId, userId);
+  }
+
+  const discountPercent = promo
+    ? clampInt(Number(promo.discount_percent ?? 0), 0, 100)
     : 0;
-  const finalPrice = Math.max(
-    0,
-    Math.round((basePrice * (100 - discountPercentApplied)) / 100)
-  );
 
-  return {
-    basePrice,
-    discountPercentApplied,
-    finalPrice,
-    promotionId: promo?.id ?? null,
-    note: promo ? `Promo terpasang (${discountPercentApplied}%)` : undefined,
-  };
-}
+  const discountIdr = Math.floor((basePrice * discountPercent) / 100);
+  const finalPrice = Math.max(0, basePrice - discountIdr);
 
-export async function createCheckoutIntentAction(
-  formData: FormData
-): Promise<void> {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-
-  const user = auth.user;
-  if (!user) redirect("/login");
-
-  const planId = toStr(formData.get("plan_id"));
-  const coupon = toStr(formData.get("coupon")) || null;
-
-  if (!planId) throw new Error("Plan wajib dipilih.");
-
-  const pricing = await computePricing({
-    supabase,
-    userId: user.id,
-    planId,
-    couponCode: coupon || undefined,
-  });
-
-  // simpan intent (snapshot harga)
-  const { data: intent, error } = await supabase
+  // 4) insert intent (admin bypass RLS)
+  const { data: intent, error: intentErr } = await admin
     .from("payment_intents")
     .insert({
-      user_id: user.id,
+      user_id: userId,
       plan_id: planId,
-      promotion_id: pricing.promotionId,
-      coupon_code: coupon,
-      base_price_idr: pricing.basePrice,
-      discount_percent_applied: pricing.discountPercentApplied,
-      final_price_idr: pricing.finalPrice,
+      promotion_id: promo?.id ?? null,
+      coupon_code: coupon || null,
+      base_price_idr: basePrice,
+      discount_percent_applied: discountPercent,
+      discount_idr: discountIdr,
+      final_price_idr: finalPrice,
       status: "pending",
+      // optional: expires_at kalau kamu pakai
+      // expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
     })
     .select("id")
     .maybeSingle();
 
-  if (error) throw error;
-  if (!intent?.id) throw new Error("Gagal membuat checkout.");
+  if (intentErr || !intent?.id) redirect("/subscribe?error=intent_failed");
 
-  // Next: kita akan buat endpoint /api/pay/midtrans untuk create Snap token dari intent.id
   redirect(`/subscribe/pay?intent=${intent.id}`);
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createCheckoutIntentAction } from "./actions";
@@ -11,11 +12,91 @@ function formatIDR(n: number) {
   }).format(n);
 }
 
+function isActiveWindow(startAt: string | null, endAt: string | null) {
+  const now = Date.now();
+  const s = startAt ? new Date(startAt).getTime() : null;
+  const e = endAt ? new Date(endAt).getTime() : null;
+  if (s && s > now) return false;
+  if (e && e <= now) return false;
+  return true;
+}
+
+type PromoRow = {
+  id: string;
+  discount_percent: number;
+  start_at: string | null;
+  end_at: string | null;
+  is_active: boolean;
+  archived_at: string | null;
+  new_customer_only: boolean;
+  max_redemptions: number | null;
+  max_redemptions_per_user: number | null;
+};
+
+// minimal typings supaya gak any
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+async function isNewCustomer(admin: AdminClient, userId: string) {
+  const [{ count: paidCount }, { count: subCount }] = await Promise.all([
+    admin
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "paid"),
+    admin
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+  ]);
+
+  return (paidCount ?? 0) === 0 && (subCount ?? 0) === 0;
+}
+
+async function promoApplicable(
+  admin: AdminClient,
+  promoId: string,
+  planId: string
+) {
+  const { data } = await admin
+    .from("promotion_plans")
+    .select("promotion_id, plan_id")
+    .eq("promotion_id", promoId)
+    .eq("plan_id", planId)
+    .maybeSingle();
+
+  return !!data;
+}
+
+async function canRedeem(admin: AdminClient, promo: PromoRow, userId: string) {
+  if (promo.max_redemptions) {
+    const { count } = await admin
+      .from("promotion_redemptions")
+      .select("id", { count: "exact", head: true })
+      .eq("promotion_id", promo.id);
+
+    if ((count ?? 0) >= promo.max_redemptions) return false;
+  }
+
+  const perUser = promo.max_redemptions_per_user ?? 1;
+  if (perUser > 0) {
+    const { count } = await admin
+      .from("promotion_redemptions")
+      .select("id", { count: "exact", head: true })
+      .eq("promotion_id", promo.id)
+      .eq("user_id", userId);
+
+    if ((count ?? 0) >= perUser) return false;
+  }
+
+  return true;
+}
+
 export default async function SubscribePage() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
 
-  if (!auth.user) {
+  // ✅ guard dulu, baru bikin userId yang pasti string
+  if (!auth.user?.id) {
     return (
       <div className="text-sm">
         Kamu belum login.{" "}
@@ -26,23 +107,69 @@ export default async function SubscribePage() {
     );
   }
 
-  const { data: plans, error } = await supabase
+  const userId = auth.user.id;
+
+  const admin = createAdminClient();
+
+  // plans aktif
+  const { data: plans, error: plansErr } = await admin
     .from("subscription_plans")
     .select(
-      "id, code, name, price_idr, duration_days, description, is_active, sort_order"
+      "id, name, price_idr, duration_days, description, is_active, sort_order"
     )
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
 
-  if (error) {
+  if (plansErr) {
     return (
       <pre className="text-xs text-red-500">
-        {JSON.stringify(error, null, 2)}
+        {JSON.stringify(plansErr, null, 2)}
       </pre>
     );
   }
 
   const safePlans = plans ?? [];
+
+  // preview promo auto new customer (tanpa kupon)
+  const isNew = await isNewCustomer(admin, userId);
+
+  const { data: promos } = await admin
+    .from("promotions")
+    .select(
+      "id, discount_percent, start_at, end_at, is_active, archived_at, new_customer_only, max_redemptions, max_redemptions_per_user"
+    )
+    .eq("is_active", true)
+    .is("archived_at", null)
+    .eq("new_customer_only", true);
+
+  const activePromos = (promos ?? [])
+    .filter((p: any) => isActiveWindow(p.start_at, p.end_at))
+    .sort(
+      (a: any, b: any) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0)
+    ) as PromoRow[];
+
+  async function bestDiscountForPlan(planId: string): Promise<number> {
+    if (!isNew) return 0;
+
+    for (const p of activePromos) {
+      const okPlan = await promoApplicable(admin, p.id, planId);
+      if (!okPlan) continue;
+
+      // ✅ userId sudah pasti string, jadi TS gak merah
+      const okQuota = await canRedeem(admin, p, userId);
+      if (!okQuota) continue;
+
+      return Number(p.discount_percent ?? 0);
+    }
+
+    return 0;
+  }
+
+  // precompute diskon per plan (supaya UI ga nunggu per map)
+  const discountMap = new Map<string, number>();
+  for (const p of safePlans) {
+    discountMap.set(p.id, await bestDiscountForPlan(p.id));
+  }
 
   return (
     <div className="space-y-4">
@@ -51,6 +178,18 @@ export default async function SubscribePage() {
         <p className="text-sm text-muted-foreground">
           Pilih paket premium untuk membuka semua fitur.
         </p>
+
+        {isNew ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Kamu terdeteksi sebagai user baru. Diskon otomatis akan muncul jika
+            promo tersedia.
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Diskon user baru tidak berlaku karena akun ini sudah punya riwayat
+            pembayaran/langganan.
+          </p>
+        )}
       </div>
 
       <form action={createCheckoutIntentAction} className="space-y-3">
@@ -63,34 +202,60 @@ export default async function SubscribePage() {
                 Belum ada plan aktif. Hubungi admin.
               </p>
             ) : (
-              safePlans.map((p: any) => (
-                <label
-                  key={p.id}
-                  className="flex items-start gap-3 rounded-xl border p-3"
-                >
-                  <input
-                    type="radio"
-                    name="plan_id"
-                    value={p.id}
-                    required
-                    className="mt-1"
-                  />
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold">{p.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {p.duration_days} hari
-                      </span>
+              safePlans.map((p: any) => {
+                const base = Number(p.price_idr ?? 0);
+                const disc = discountMap.get(p.id) ?? 0;
+                const discountAmount = Math.floor((base * disc) / 100);
+                const final = Math.max(0, base - discountAmount);
+
+                return (
+                  <label
+                    key={p.id}
+                    className="flex items-start gap-3 rounded-xl border p-3"
+                  >
+                    <input
+                      type="radio"
+                      name="plan_id"
+                      value={p.id}
+                      required
+                      className="mt-1"
+                    />
+
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold">{p.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {p.duration_days} hari
+                        </span>
+                        {disc > 0 ? (
+                          <span className="rounded-full border px-2 py-0.5 text-[11px]">
+                            Diskon {disc}%
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {disc > 0 ? (
+                        <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                          <span className="text-sm line-through text-muted-foreground">
+                            {formatIDR(base)}
+                          </span>
+                          <span className="text-sm font-semibold">
+                            {formatIDR(final)}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-sm">{formatIDR(base)}</p>
+                      )}
+
+                      {p.description ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {p.description}
+                        </p>
+                      ) : null}
                     </div>
-                    <p className="mt-1 text-sm">{formatIDR(p.price_idr)}</p>
-                    {p.description ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {p.description}
-                      </p>
-                    ) : null}
-                  </div>
-                </label>
-              ))
+                  </label>
+                );
+              })
             )}
           </div>
         </Card>
@@ -98,7 +263,7 @@ export default async function SubscribePage() {
         <Card className="p-4">
           <p className="text-sm font-semibold">Kode Kupon (opsional)</p>
           <p className="text-xs text-muted-foreground">
-            Kalau punya kupon, masukkan di sini.
+            Kupon dihitung saat checkout.
           </p>
 
           <input
@@ -113,8 +278,7 @@ export default async function SubscribePage() {
         </Button>
 
         <p className="text-xs text-muted-foreground">
-          Dengan menekan tombol di atas, kamu akan diarahkan ke halaman
-          pembayaran.
+          Setelah lanjut, kamu akan masuk halaman konfirmasi checkout.
         </p>
       </form>
     </div>

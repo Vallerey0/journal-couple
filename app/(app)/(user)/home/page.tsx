@@ -8,14 +8,16 @@ import { PaymentNotice } from "@/components/user/payment-notice";
 import { computePlanStatus } from "@/lib/plan";
 import { createClient } from "@/utils/supabase/server";
 
+type SP = {
+  paid?: string;
+  pending?: string;
+  pay_error?: string;
+};
+
 export default async function UserHomePage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    paid?: string;
-    pending?: string;
-    pay_error?: string;
-  }>;
+  searchParams: Promise<SP>;
 }) {
   const sp = await searchParams;
 
@@ -34,10 +36,23 @@ export default async function UserHomePage({
     );
   }
 
+  // ✅ ambil profile + join plan lewat FK current_plan_id
   const { data: profile, error } = await supabase
     .from("profiles")
     .select(
-      "id, full_name, plan, active_until, trial_ends_at, subscription_status"
+      `
+      id,
+      full_name,
+      active_until,
+      trial_started_at,
+      trial_ends_at,
+      current_plan_id,
+      subscription_plans:current_plan_id (
+        id,
+        name,
+        code
+      )
+    `
     )
     .eq("id", user.id)
     .maybeSingle();
@@ -53,20 +68,24 @@ export default async function UserHomePage({
   const safeProfile = profile ?? {
     id: user.id,
     full_name: user.email ?? "User",
-    plan: "trial",
     active_until: null,
+    trial_started_at: null,
     trial_ends_at: null,
-    subscription_status: "inactive",
+    current_plan_id: null,
+    subscription_plans: null as any,
   };
 
+  const planName =
+    (safeProfile as any)?.subscription_plans?.name ??
+    (safeProfile.current_plan_id ? "Premium" : null);
+
   const { view, note, showSubscribe } = computePlanStatus({
-    plan: safeProfile.plan,
     active_until: safeProfile.active_until,
     trial_ends_at: safeProfile.trial_ends_at,
-    subscription_status: safeProfile.subscription_status,
+    current_plan_id: safeProfile.current_plan_id,
   });
 
-  const coupleName = safeProfile.full_name ?? "Couple";
+  const coupleName = safeProfile.full_name ?? user.email ?? "User";
   const shareUrl = `https://yourdomain.com/j/your-share-code`;
 
   return (
@@ -82,7 +101,7 @@ export default async function UserHomePage({
       {sp.pending ? <PaymentNotice variant="pending" /> : null}
       {sp.pay_error ? <PaymentNotice variant="error" /> : null}
 
-      <PlanStatus view={view} note={note} />
+      <PlanStatus view={view} note={note} planName={planName} />
 
       <SubscribeBanner
         show={showSubscribe}

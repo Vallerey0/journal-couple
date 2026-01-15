@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 function sha512(input: string) {
   return crypto.createHash("sha512").update(input).digest("hex");
+}
+
+function isPaidStatus(s: string) {
+  return s === "settlement" || s === "capture";
 }
 
 export async function POST(req: Request) {
@@ -17,17 +21,14 @@ export async function POST(req: Request) {
     const transactionStatus = String(body.transaction_status ?? "");
 
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SECRET_KEY;
-
-    if (!serverKey || !supabaseUrl || !serviceKey) {
+    if (!serverKey) {
       return NextResponse.json(
-        { message: "Missing env (MIDTRANS_SERVER_KEY / SUPABASE keys)" },
+        { message: "MIDTRANS_SERVER_KEY missing" },
         { status: 500 }
       );
     }
 
-    // ✅ Verify signature (wajib)
+    // verify signature
     const expected = sha512(orderId + statusCode + grossAmount + serverKey);
     if (expected !== signatureKey) {
       return NextResponse.json(
@@ -36,19 +37,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Paid condition
-    const isPaid =
-      transactionStatus === "settlement" || transactionStatus === "capture";
-    if (!isPaid) {
-      // pending/expire/cancel/deny dll: cukup ack
+    if (!isPaidStatus(transactionStatus)) {
+      // pending/expire/cancel/deny -> ack
       return NextResponse.json({ message: "Not paid", transactionStatus });
     }
 
-    const admin = createAdminClient(supabaseUrl, serviceKey, {
-      auth: { persistSession: false },
-    });
+    const admin = createAdminClient();
 
-    // 1) Cari intent berdasarkan midtrans_order_id (paling akurat)
+    // cari intent by midtrans_order_id
     const { data: intent, error: intentErr } = await admin
       .from("payment_intents")
       .select(
@@ -57,13 +53,13 @@ export async function POST(req: Request) {
         user_id,
         plan_id,
         promotion_id,
-        status,
+        base_price_idr,
+        discount_percent_applied,
+        discount_idr,
         final_price_idr,
+        status,
         midtrans_order_id,
-        subscription_plans:plan_id (
-          code,
-          duration_days
-        )
+        subscription_plans:plan_id ( id, code, duration_days )
       `
       )
       .eq("midtrans_order_id", orderId)
@@ -79,24 +75,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // idempotent: kalau sudah paid, stop
+    // idempotent
     if (intent.status === "paid") {
       return NextResponse.json({ message: "Already processed" });
     }
 
-    // ✅ fix typing relasi: kadang dianggap array
     const plan = Array.isArray((intent as any).subscription_plans)
       ? (intent as any).subscription_plans[0]
       : (intent as any).subscription_plans;
 
-    if (!plan?.code || !plan?.duration_days) {
+    if (!plan?.id || !plan?.duration_days) {
       return NextResponse.json(
-        { message: "Plan data missing" },
+        { message: "Plan join missing" },
         { status: 400 }
       );
     }
 
-    // 2) Update payment intent paid
+    // 1) update intent -> paid
     const { error: upIntentErr } = await admin
       .from("payment_intents")
       .update({ status: "paid" })
@@ -109,25 +104,62 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3) Insert redemption (kalau ada promo) - ignore duplicate (kalau webhook kepanggil 2x)
+    // 2) insert payments (unik provider_order_id)
+    const { data: payRow, error: payErr } = await admin
+      .from("payments")
+      .insert({
+        user_id: intent.user_id,
+        plan_id: intent.plan_id,
+        promotion_id: intent.promotion_id,
+        provider: "midtrans",
+        provider_order_id: orderId,
+        gross_amount: Number(intent.final_price_idr ?? 0),
+        status: "paid",
+        paid_at: new Date().toISOString(),
+        intent_id: intent.id,
+      })
+      .select("id")
+      .maybeSingle();
+
+    // kalau duplicate order_id (webhook dipanggil 2x), abaikan
+    if (payErr && !String(payErr.message).toLowerCase().includes("duplicate")) {
+      return NextResponse.json({ message: payErr.message }, { status: 400 });
+    }
+
+    // 3) redemption (opsional) - simpan relasi intent/payment supaya rapih
     if (intent.promotion_id) {
       await admin.from("promotion_redemptions").insert({
         promotion_id: intent.promotion_id,
         user_id: intent.user_id,
+        plan_id: intent.plan_id,
+        intent_id: intent.id,
+        payment_id: payRow?.id ?? null,
+        provider_order_id: orderId,
+        order_id: orderId,
       });
     }
 
-    // 4) Update profile jadi active
+    // 4) subscriptions: buat active sampai end
     const days = Number(plan.duration_days);
-    const activeUntil = new Date();
-    activeUntil.setDate(activeUntil.getDate() + days);
+    const startAt = new Date();
+    const endAt = new Date();
+    endAt.setDate(endAt.getDate() + days);
 
+    await admin.from("subscriptions").insert({
+      user_id: intent.user_id,
+      plan_id: plan.id,
+      status: "active",
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+    });
+
+    // 5) profiles: update current_plan_id + active_until (+ optional trial clear)
     const { error: upProfileErr } = await admin
       .from("profiles")
       .update({
-        plan: String(plan.code),
-        subscription_status: "active",
-        active_until: activeUntil.toISOString(),
+        current_plan_id: plan.id,
+        active_until: endAt.toISOString(),
+        // optional: trial_ends_at: null, trial_started_at: null,
       })
       .eq("id", intent.user_id);
 
