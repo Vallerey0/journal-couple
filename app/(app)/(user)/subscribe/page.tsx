@@ -4,12 +4,21 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createCheckoutIntentAction } from "./actions";
+import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 
 function formatIDR(n: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
   }).format(n);
+}
+
+function formatDateTimeID(iso: string) {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(d);
 }
 
 function isActiveWindow(startAt: string | null, endAt: string | null) {
@@ -130,6 +139,24 @@ export default async function SubscribePage() {
 
   const safePlans = plans ?? [];
 
+  const { data: pendingIntent } = await admin
+    .from("payment_intents")
+    .select(
+      `
+      id,
+      plan_id,
+      final_price_idr,
+      coupon_code,
+      created_at,
+      subscription_plans:plan_id ( name )
+    `
+    )
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   // preview promo auto new customer (tanpa kupon)
   const isNew = await isNewCustomer(admin, userId);
 
@@ -171,6 +198,14 @@ export default async function SubscribePage() {
     discountMap.set(p.id, await bestDiscountForPlan(p.id));
   }
 
+  const pendingPlan = pendingIntent
+    ? Array.isArray((pendingIntent as any).subscription_plans)
+      ? (pendingIntent as any).subscription_plans[0]
+      : (pendingIntent as any).subscription_plans
+    : null;
+
+  const pendingPlanName = pendingPlan?.name ?? "Plan";
+
   return (
     <div className="space-y-4">
       <div>
@@ -192,8 +227,46 @@ export default async function SubscribePage() {
         )}
       </div>
 
+      {pendingIntent ? (
+        <Card className="gap-3 p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">
+              Ada pembayaran yang belum selesai
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Checkout terakhir: {pendingPlanName} •{" "}
+              {formatIDR(Number(pendingIntent.final_price_idr ?? 0))} •{" "}
+              {formatDateTimeID(pendingIntent.created_at)}
+              {pendingIntent.coupon_code
+                ? ` • Kupon ${pendingIntent.coupon_code}`
+                : ""}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Button asChild className="w-full">
+              <Link href={`/subscribe/pay?intent=${pendingIntent.id}`}>
+                Lanjutkan pembayaran
+              </Link>
+            </Button>
+
+            <Button asChild className="w-full" variant="outline">
+              <a href="#plan">Ganti plan</a>
+            </Button>
+
+            <form action={cancelPendingIntentAction} className="sm:col-span-2">
+              <input type="hidden" name="intent_id" value={pendingIntent.id} />
+              <input type="hidden" name="next" value="/subscribe" />
+              <Button type="submit" variant="ghost" className="w-full">
+                Batalkan checkout
+              </Button>
+            </form>
+          </div>
+        </Card>
+      ) : null}
+
       <form action={createCheckoutIntentAction} className="space-y-3">
-        <Card className="p-4">
+        <Card className="p-4" id="plan">
           <p className="text-sm font-semibold">Pilih Plan</p>
 
           <div className="mt-3 grid gap-2">
@@ -274,11 +347,13 @@ export default async function SubscribePage() {
         </Card>
 
         <Button className="w-full" type="submit">
-          Lanjut Pembayaran
+          {pendingIntent ? "Buat Checkout Baru" : "Lanjut Pembayaran"}
         </Button>
 
         <p className="text-xs text-muted-foreground">
-          Setelah lanjut, kamu akan masuk halaman konfirmasi checkout.
+          {pendingIntent
+            ? "Ini akan membuat checkout baru. Checkout sebelumnya akan otomatis kedaluwarsa."
+            : "Setelah lanjut, kamu akan masuk halaman konfirmasi checkout."}
         </p>
       </form>
     </div>

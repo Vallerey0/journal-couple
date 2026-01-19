@@ -9,6 +9,30 @@ function isEmailValid(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+async function getOriginFromHeaders() {
+  const h = await headers();
+
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const xfHost = h.get("x-forwarded-host");
+  const host = xfHost ?? h.get("host");
+
+  if (host) return `${proto}://${host}`;
+
+  return (
+    h.get("origin") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000"
+  );
+}
+
+function mapAuthErrorToMessage(raw: string) {
+  const msg = raw.toLowerCase();
+  if (msg.includes("rate limit") || msg.includes("too many")) {
+    return "Terlalu sering. Coba lagi sebentar.";
+  }
+  return raw;
+}
+
 export async function resendActivationAction(
   _: State,
   formData: FormData
@@ -18,18 +42,11 @@ export async function resendActivationAction(
     .toLowerCase();
   if (!isEmailValid(email)) return { message: "Email tidak valid." };
 
-  const h = await headers();
-  const origin =
-    h.get("origin") ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000";
-
+  const origin = await getOriginFromHeaders();
   const supabase = await createClient();
 
-  const next = "/login?activated=1";
-  const emailRedirectTo = `${origin}/auth/callback?type=signup&next=${encodeURIComponent(
-    next
-  )}&email=${encodeURIComponent(email)}`;
+  // ✅ sama: hanya /auth/confirm
+  const emailRedirectTo = `${origin}/auth/confirm`;
 
   const { error } = await supabase.auth.resend({
     type: "signup",
@@ -37,7 +54,7 @@ export async function resendActivationAction(
     options: { emailRedirectTo },
   });
 
-  if (error) return { message: error.message };
+  if (error) return { message: mapAuthErrorToMessage(error.message) };
 
   return {
     ok: true,

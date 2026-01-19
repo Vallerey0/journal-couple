@@ -5,8 +5,11 @@ import { DashboardHeader } from "@/components/user/dashboard-header";
 import { SubscribeBanner } from "@/components/user/subscribe-banner";
 import { PlanStatus } from "@/components/user/plan-status";
 import { PaymentNotice } from "@/components/user/payment-notice";
+import { PaymentCountdown } from "@/components/user/payment-countdown";
 import { computePlanStatus } from "@/lib/plan";
 import { createClient } from "@/utils/supabase/server";
+import HomeAutoRefresh from "./HomeAutoRefresh";
+import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 
 type SP = {
   paid?: string;
@@ -20,6 +23,10 @@ export default async function UserHomePage({
   searchParams: Promise<SP>;
 }) {
   const sp = await searchParams;
+
+  const paid = sp.paid === "1";
+  const pending = sp.pending === "1";
+  const payError = sp.pay_error === "1";
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -36,8 +43,8 @@ export default async function UserHomePage({
     );
   }
 
-  // ✅ ambil profile + join plan lewat FK current_plan_id
-  const { data: profile, error } = await supabase
+  /* ================= PROFILE ================= */
+  const { data: profile } = await supabase
     .from("profiles")
     .select(
       `
@@ -52,18 +59,23 @@ export default async function UserHomePage({
         name,
         code
       )
-    `
+    `,
     )
     .eq("id", user.id)
     .maybeSingle();
 
-  if (error) {
-    return (
-      <pre className="text-xs text-red-500">
-        {JSON.stringify(error, null, 2)}
-      </pre>
-    );
-  }
+  /* ================= PENDING INTENT (VALID ONLY) ================= */
+  const now = new Date().toISOString();
+
+  const { data: pendingIntent } = await supabase
+    .from("payment_intents")
+    .select("id, expires_at")
+    .eq("user_id", user.id)
+    .eq("status", "pending")
+    .gt("expires_at", now)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   const safeProfile = profile ?? {
     id: user.id,
@@ -75,10 +87,6 @@ export default async function UserHomePage({
     subscription_plans: null as any,
   };
 
-  const planName =
-    (safeProfile as any)?.subscription_plans?.name ??
-    (safeProfile.current_plan_id ? "Premium" : null);
-
   const { view, note, showSubscribe } = computePlanStatus({
     active_until: safeProfile.active_until,
     trial_ends_at: safeProfile.trial_ends_at,
@@ -86,23 +94,85 @@ export default async function UserHomePage({
   });
 
   const coupleName = safeProfile.full_name ?? user.email ?? "User";
-  const shareUrl = `https://yourdomain.com/j/your-share-code`;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const shareUrl = `${appUrl}/j/your-share-code`;
 
   return (
     <div className="space-y-4">
+      {/* Auto refresh setelah webhook */}
+      <HomeAutoRefresh
+        paid={paid}
+        pending={pending}
+        activeUntil={safeProfile.active_until}
+        currentPlanId={safeProfile.current_plan_id}
+      />
+
       <DashboardHeader
         title="Dashboard"
         subtitle={`Selamat datang, ${coupleName}`}
         initials={(coupleName?.[0] ?? "U").toUpperCase()}
       />
 
-      {/* ✅ Notice pembayaran (tanpa alert) */}
-      {sp.paid ? <PaymentNotice variant="success" /> : null}
-      {sp.pending ? <PaymentNotice variant="pending" /> : null}
-      {sp.pay_error ? <PaymentNotice variant="error" /> : null}
+      {paid && <PaymentNotice variant="success" />}
+      {pending && <PaymentNotice variant="pending" />}
+      {payError && <PaymentNotice variant="error" />}
 
-      <PlanStatus view={view} note={note} planName={planName} />
+      {/* ================= CTA PENDING PAYMENT (FIX UI SAJA) ================= */}
+      {pendingIntent ? (
+        <Card className="p-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold">
+              Ada pembayaran yang belum selesai
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Selesaikan pembayaran untuk mengaktifkan langganan kamu.
+            </p>
+          </div>
 
+          {/* COUNTDOWN */}
+          <PaymentCountdown expiresAt={pendingIntent.expires_at} />
+
+          {/* TOMBOL TUMPUK TIGA (MOBILE FIRST) */}
+          <div className="space-y-2">
+            <Button asChild className="w-full">
+              <Link href={`/subscribe/pay?intent=${pendingIntent.id}`}>
+                Lanjutkan pembayaran
+              </Link>
+            </Button>
+
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/subscribe">Ganti plan / kupon</Link>
+            </Button>
+
+            <form action={cancelPendingIntentAction}>
+              <input type="hidden" name="intent_id" value={pendingIntent.id} />
+              <input type="hidden" name="next" value="/home" />
+              <Button
+                type="submit"
+                variant="ghost"
+                className="w-full text-muted-foreground"
+              >
+                Batalkan checkout
+              </Button>
+            </form>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground">
+            Batas waktu ini hanya untuk reservasi checkout. Pembayaran tetap
+            diproses jika berhasil.
+          </p>
+        </Card>
+      ) : null}
+
+      {/* ================= PLAN STATUS ================= */}
+      <PlanStatus
+        view={view}
+        note={note}
+        activeUntil={safeProfile.active_until}
+      />
+
+      {/* ================= SUBSCRIBE BANNER ================= */}
       <SubscribeBanner
         show={showSubscribe}
         title={
@@ -116,6 +186,7 @@ export default async function UserHomePage({
         cta={view === "expired" ? "Berlangganan" : "Subscribe"}
       />
 
+      {/* ================= LINK JOURNAL ================= */}
       <Card className="p-4">
         <p className="text-sm font-medium">Link Journal</p>
         <p className="mt-1 break-all text-sm text-muted-foreground">
@@ -134,6 +205,7 @@ export default async function UserHomePage({
         </p>
       </Card>
 
+      {/* ================= QUICK STATS ================= */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
           <p className="text-xs text-muted-foreground">Photos</p>

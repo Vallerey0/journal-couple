@@ -1,56 +1,61 @@
+import { formatDateID, formatRemainingFull } from "@/lib/duration";
+
+/* ================= TYPES ================= */
 export type PlanView = "premium" | "trial" | "expired";
 
-function fmtDateID(v: Date) {
-  return new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(v);
-}
-
-function diffDaysCeil(a: Date, b: Date) {
-  const ms = b.getTime() - a.getTime();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
-}
-
-export function computePlanStatus(input: {
-  current_plan_id: string | null;
+type Input = {
   active_until: string | null;
   trial_ends_at: string | null;
-}): { view: PlanView; note: string; showSubscribe: boolean } {
-  const now = new Date();
+  current_plan_id: string | null;
+};
 
-  // ✅ Premium valid kalau:
-  // - ada current_plan_id
-  // - active_until ada & masih di masa depan
-  const activeUntil = input.active_until ? new Date(input.active_until) : null;
-  const hasPremium =
-    !!input.current_plan_id &&
-    !!activeUntil &&
-    activeUntil.getTime() > now.getTime();
+export function computePlanStatus(input: Input) {
+  const now = Date.now();
 
-  if (hasPremium) {
-    const d = diffDaysCeil(now, activeUntil!);
-    const note =
-      d <= 1 ? `Berakhir ${fmtDateID(activeUntil!)}` : `Sisa ${d} hari`;
-    return { view: "premium", note, showSubscribe: false };
+  const activeUntilTs = input.active_until
+    ? new Date(input.active_until).getTime()
+    : null;
+
+  const trialEndsTs = input.trial_ends_at
+    ? new Date(input.trial_ends_at).getTime()
+    : null;
+
+  // PREMIUM jika ada plan + active_until masih di depan
+  const isPremium =
+    !!input.current_plan_id && !!activeUntilTs && activeUntilTs > now;
+
+  if (isPremium) {
+    return {
+      view: "premium" as PlanView,
+      title: "PREMIUM",
+      note: "Akun premium aktif",
+      untilText: `Aktif sampai ${formatDateID(input.active_until!)}`,
+      remainingText: `Sisa ${formatRemainingFull(input.active_until!)}`,
+      showSubscribe: false,
+    };
   }
 
-  // ✅ Trial valid kalau:
-  // - belum premium
-  // - trial_ends_at ada & masih di masa depan
-  const trialEnds = input.trial_ends_at ? new Date(input.trial_ends_at) : null;
-  const hasTrial = !!trialEnds && trialEnds.getTime() > now.getTime();
+  // TRIAL jika trial belum habis
+  const isTrial = !!trialEndsTs && trialEndsTs > now;
 
-  if (hasTrial) {
-    const d = diffDaysCeil(now, trialEnds!);
-    const note =
-      d <= 1
-        ? `Trial berakhir ${fmtDateID(trialEnds!)}`
-        : `Trial sisa ${d} hari`;
-    return { view: "trial", note, showSubscribe: true };
+  if (isTrial) {
+    return {
+      view: "trial" as PlanView,
+      title: "TRIAL",
+      note: "Kamu sedang menggunakan trial",
+      untilText: `Trial sampai ${formatDateID(input.trial_ends_at!)}`,
+      remainingText: `Sisa ${formatRemainingFull(input.trial_ends_at!)}`,
+      showSubscribe: true,
+    };
   }
 
-  // ✅ selain itu: expired
+  // EXPIRED
   return {
-    view: "expired",
-    note: "Tidak ada paket aktif",
+    view: "expired" as PlanView,
+    title: "EXPIRED",
+    note: "Akun kamu tidak aktif. Langganan sekarang untuk mengakses kembali.",
+    untilText: "Akun kamu tidak aktif",
+    remainingText: "Langganan untuk membuka kembali semua fitur.",
     showSubscribe: true,
   };
 }

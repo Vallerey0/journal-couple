@@ -9,8 +9,49 @@ type State = { message?: string };
 function isEmailValid(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
 function normalizePhone(phone: string) {
   return phone.replace(/[^\d+]/g, "");
+}
+
+async function getOriginFromHeaders() {
+  const h = await headers();
+
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const xfHost = h.get("x-forwarded-host");
+  const host = xfHost ?? h.get("host");
+
+  if (host) return `${proto}://${host}`;
+
+  return (
+    h.get("origin") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000"
+  );
+}
+
+function mapAuthErrorToMessage(raw: string) {
+  const msg = raw.toLowerCase();
+
+  if (
+    msg.includes("already") ||
+    msg.includes("registered") ||
+    msg.includes("exists") ||
+    msg.includes("duplicate") ||
+    msg.includes("taken")
+  ) {
+    return "EMAIL_EXISTS";
+  }
+
+  if (msg.includes("rate limit") || msg.includes("too many")) {
+    return "Terlalu sering. Coba lagi sebentar.";
+  }
+
+  if (msg.includes("password")) {
+    return "Password tidak memenuhi syarat.";
+  }
+
+  return raw;
 }
 
 export async function registerAction(
@@ -25,7 +66,7 @@ export async function registerAction(
   const password = String(formData.get("password") || "");
   const confirm = String(formData.get("confirm_password") || "");
 
-  // server-side validation (final guard)
+  // validation (server guard)
   if (!full_name) return { message: "Nama wajib diisi." };
   if (!email) return { message: "Email wajib diisi." };
   if (!isEmailValid(email)) return { message: "Email tidak valid." };
@@ -34,19 +75,12 @@ export async function registerAction(
   if (password !== confirm)
     return { message: "Konfirmasi password tidak sama." };
 
-  const h = await headers();
-  const origin =
-    h.get("origin") ??
-    process.env.NEXT_PUBLIC_APP_URL ??
-    "http://localhost:3000";
-
+  const origin = await getOriginFromHeaders();
   const supabase = await createClient();
 
-  // ✅ PENTING: query di dalam `next` harus di-encode
-  const next = "/login?activated=1";
-  const emailRedirectTo = `${origin}/auth/callback?type=signup&next=${encodeURIComponent(
-    next
-  )}&email=${encodeURIComponent(email)}`;
+  // ✅ penting: hanya arahkan ke /auth/confirm (tanpa next)
+  // next=/login?activated=1 sudah dikunci di Email Template
+  const emailRedirectTo = `${origin}/auth/confirm`;
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -57,23 +91,8 @@ export async function registerAction(
     },
   });
 
-  if (error) {
-    const msg = error.message.toLowerCase();
+  if (error) return { message: mapAuthErrorToMessage(error.message) };
 
-    // mapping: email sudah terdaftar / sudah ada
-    if (
-      msg.includes("already") ||
-      msg.includes("registered") ||
-      msg.includes("exists") ||
-      msg.includes("duplicate") ||
-      msg.includes("taken")
-    ) {
-      return { message: "EMAIL_EXISTS" };
-    }
-
-    return { message: error.message };
-  }
-
-  // Halaman ini hanya untuk "cek email", bukan tujuan klik link aktivasi
+  // halaman info "cek email"
   redirect(`/activate?email=${encodeURIComponent(email)}`);
 }

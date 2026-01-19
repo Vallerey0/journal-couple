@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction } from "./actions";
 
@@ -36,6 +36,8 @@ export default function LoginForm({ defaultEmail }: { defaultEmail?: string }) {
 
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
+
+  const focusPassword = useMemo(() => Boolean(defaultEmail), [defaultEmail]);
 
   useEffect(() => {
     if (defaultEmail) setValues((p) => ({ ...p, email: defaultEmail }));
@@ -110,6 +112,7 @@ export default function LoginForm({ defaultEmail }: { defaultEmail?: string }) {
           onChange={(e) => setField("password", e.target.value)}
           onBlur={() => blurField("password")}
           required
+          autoFocus={focusPassword}
           className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
           placeholder="Password kamu"
         />

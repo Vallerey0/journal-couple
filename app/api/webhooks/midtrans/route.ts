@@ -2,29 +2,52 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/utils/supabase/admin";
 
+/* ================= Helpers ================= */
 function sha512(input: string) {
   return crypto.createHash("sha512").update(input).digest("hex");
 }
-
+function safeStr(v: unknown) {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
 function isPaidStatus(s: string) {
   return s === "settlement" || s === "capture";
 }
+function isFinalFailStatus(s: string) {
+  return s === "expire" || s === "cancel" || s === "deny";
+}
+function pickPaymentMethod(body: any) {
+  const payment_type = body?.payment_type ? String(body.payment_type) : null;
+  let payment_channel: string | null = null;
 
+  if (payment_type === "bank_transfer") {
+    const va = Array.isArray(body?.va_numbers) ? body.va_numbers[0] : null;
+    const bank = va?.bank ? String(va.bank).toUpperCase() : null;
+    payment_channel = bank ? `${bank} VA` : "VA";
+  }
+  if (payment_type === "echannel") payment_channel = "Mandiri Bill";
+  if (payment_type === "qris") payment_channel = "QRIS";
+  if (payment_type === "gopay") payment_channel = "GoPay";
+  if (!payment_channel && payment_type) payment_channel = payment_type;
+
+  return { payment_type, payment_channel };
+}
+
+/* ================= Webhook ================= */
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body: any = await req.json();
 
-    const orderId = String(body.order_id ?? "");
-    const statusCode = String(body.status_code ?? "");
-    const grossAmount = String(body.gross_amount ?? "");
-    const signatureKey = String(body.signature_key ?? "");
-    const transactionStatus = String(body.transaction_status ?? "");
+    const orderId = safeStr(body.order_id);
+    const statusCode = safeStr(body.status_code);
+    const grossAmount = safeStr(body.gross_amount);
+    const signatureKey = safeStr(body.signature_key);
+    const transactionStatus = safeStr(body.transaction_status);
 
     const serverKey = process.env.MIDTRANS_SERVER_KEY;
     if (!serverKey) {
       return NextResponse.json(
-        { message: "MIDTRANS_SERVER_KEY missing" },
-        { status: 500 }
+        { message: "Server key missing" },
+        { status: 500 },
       );
     }
 
@@ -33,19 +56,14 @@ export async function POST(req: Request) {
     if (expected !== signatureKey) {
       return NextResponse.json(
         { message: "Invalid signature" },
-        { status: 403 }
+        { status: 403 },
       );
-    }
-
-    if (!isPaidStatus(transactionStatus)) {
-      // pending/expire/cancel/deny -> ack
-      return NextResponse.json({ message: "Not paid", transactionStatus });
     }
 
     const admin = createAdminClient();
 
-    // cari intent by midtrans_order_id
-    const { data: intent, error: intentErr } = await admin
+    // ambil intent
+    const { data: intent } = await admin
       .from("payment_intents")
       .select(
         `
@@ -53,31 +71,20 @@ export async function POST(req: Request) {
         user_id,
         plan_id,
         promotion_id,
-        base_price_idr,
-        discount_percent_applied,
-        discount_idr,
         final_price_idr,
         status,
-        midtrans_order_id,
-        subscription_plans:plan_id ( id, code, duration_days )
-      `
+        processed_at,
+        subscription_plans:plan_id ( id, duration_days )
+      `,
       )
       .eq("midtrans_order_id", orderId)
       .maybeSingle();
 
-    if (intentErr) {
-      return NextResponse.json({ message: intentErr.message }, { status: 400 });
-    }
     if (!intent) {
       return NextResponse.json(
         { message: "Intent not found" },
-        { status: 404 }
+        { status: 404 },
       );
-    }
-
-    // idempotent
-    if (intent.status === "paid") {
-      return NextResponse.json({ message: "Already processed" });
     }
 
     const plan = Array.isArray((intent as any).subscription_plans)
@@ -85,96 +92,149 @@ export async function POST(req: Request) {
       : (intent as any).subscription_plans;
 
     if (!plan?.id || !plan?.duration_days) {
-      return NextResponse.json(
-        { message: "Plan join missing" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Plan missing" }, { status: 400 });
     }
 
-    // 1) update intent -> paid
-    const { error: upIntentErr } = await admin
+    const paid = isPaidStatus(transactionStatus);
+    const failedFinal = isFinalFailStatus(transactionStatus);
+
+    // update intent status (tracking)
+    const nextIntentStatus = paid
+      ? "paid"
+      : failedFinal
+        ? "expired"
+        : "pending";
+    if (intent.status !== "paid") {
+      await admin
+        .from("payment_intents")
+        .update({ status: nextIntentStatus })
+        .eq("id", intent.id);
+    }
+
+    // payments (FINAL SAJA)
+    const nextPaymentStatus = paid
+      ? "paid"
+      : transactionStatus === "expire"
+        ? "expired"
+        : failedFinal
+          ? "failed"
+          : null;
+
+    let paymentId: string | null = null;
+
+    if (nextPaymentStatus) {
+      const method = pickPaymentMethod(body);
+
+      const { data: existingPay } = await admin
+        .from("payments")
+        .select("id, status")
+        .eq("provider_order_id", orderId)
+        .maybeSingle();
+
+      if (!existingPay) {
+        const { data: p } = await admin
+          .from("payments")
+          .insert({
+            user_id: intent.user_id,
+            plan_id: intent.plan_id,
+            promotion_id: intent.promotion_id,
+            provider: "midtrans",
+            provider_order_id: orderId,
+            gross_amount: Number(intent.final_price_idr ?? 0),
+            status: nextPaymentStatus,
+            paid_at: paid ? new Date().toISOString() : null,
+            intent_id: intent.id,
+            payment_type: method.payment_type,
+            payment_channel: method.payment_channel,
+          })
+          .select("id")
+          .maybeSingle();
+
+        paymentId = p?.id ?? null;
+      } else {
+        paymentId = existingPay.id;
+        if (existingPay.status !== "paid") {
+          await admin
+            .from("payments")
+            .update({
+              status: nextPaymentStatus,
+              paid_at: paid ? new Date().toISOString() : null,
+            })
+            .eq("id", existingPay.id);
+        }
+      }
+    }
+
+    // kalau belum PAID → STOP
+    if (!paid || !paymentId) {
+      return NextResponse.json({ message: "Webhook processed (non-paid)" });
+    }
+
+    // anti double process
+    const { data: locked } = await admin
       .from("payment_intents")
-      .update({ status: "paid" })
-      .eq("id", intent.id);
-
-    if (upIntentErr) {
-      return NextResponse.json(
-        { message: upIntentErr.message },
-        { status: 400 }
-      );
-    }
-
-    // 2) insert payments (unik provider_order_id)
-    const { data: payRow, error: payErr } = await admin
-      .from("payments")
-      .insert({
-        user_id: intent.user_id,
-        plan_id: intent.plan_id,
-        promotion_id: intent.promotion_id,
-        provider: "midtrans",
-        provider_order_id: orderId,
-        gross_amount: Number(intent.final_price_idr ?? 0),
-        status: "paid",
-        paid_at: new Date().toISOString(),
-        intent_id: intent.id,
-      })
+      .update({ processed_at: new Date().toISOString() })
+      .eq("id", intent.id)
+      .is("processed_at", null)
       .select("id")
       .maybeSingle();
 
-    // kalau duplicate order_id (webhook dipanggil 2x), abaikan
-    if (payErr && !String(payErr.message).toLowerCase().includes("duplicate")) {
-      return NextResponse.json({ message: payErr.message }, { status: 400 });
+    if (!locked?.id) {
+      return NextResponse.json({ message: "Already processed" });
     }
 
-    // 3) redemption (opsional) - simpan relasi intent/payment supaya rapih
+    // PROMO REDEMPTION — DARI PAYMENT
     if (intent.promotion_id) {
       await admin.from("promotion_redemptions").insert({
         promotion_id: intent.promotion_id,
         user_id: intent.user_id,
         plan_id: intent.plan_id,
-        intent_id: intent.id,
-        payment_id: payRow?.id ?? null,
-        provider_order_id: orderId,
-        order_id: orderId,
+        payment_id: paymentId,
       });
     }
 
-    // 4) subscriptions: buat active sampai end
-    const days = Number(plan.duration_days);
-    const startAt = new Date();
-    const endAt = new Date();
-    endAt.setDate(endAt.getDate() + days);
+    // SUBSCRIPTION & PROFILE
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("active_until")
+      .eq("id", intent.user_id)
+      .maybeSingle();
+
+    const now = new Date();
+    const prev = prof?.active_until ? new Date(prof.active_until) : null;
+    const base = prev && prev > now ? prev : now;
+
+    const endAt = new Date(base);
+    endAt.setDate(endAt.getDate() + plan.duration_days);
+
+    await admin
+      .from("subscriptions")
+      .update({ status: "expired", end_at: base.toISOString() })
+      .eq("user_id", intent.user_id)
+      .eq("status", "active");
 
     await admin.from("subscriptions").insert({
       user_id: intent.user_id,
       plan_id: plan.id,
       status: "active",
-      start_at: startAt.toISOString(),
+      start_at: base.toISOString(),
       end_at: endAt.toISOString(),
     });
 
-    // 5) profiles: update current_plan_id + active_until (+ optional trial clear)
-    const { error: upProfileErr } = await admin
+    // ⛔ TIDAK MENYENTUH trial_started_at & trial_ends_at
+    await admin
       .from("profiles")
       .update({
         current_plan_id: plan.id,
         active_until: endAt.toISOString(),
-        // optional: trial_ends_at: null, trial_started_at: null,
       })
       .eq("id", intent.user_id);
 
-    if (upProfileErr) {
-      return NextResponse.json(
-        { message: upProfileErr.message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ message: "Payment processed" });
+    return NextResponse.json({ message: "Payment processed (final)" });
   } catch (e: any) {
     return NextResponse.json(
       { message: e?.message ?? "Webhook error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -74,11 +74,11 @@ export default async function SubscribePayPage({
       <div>
         <h1 className="text-lg font-semibold">Pembayaran</h1>
         <p className="text-sm text-muted-foreground">
-          Konfirmasi checkout sebelum lanjut ke Midtrans.
+          Konfirmasi checkout, lalu pilih metode pembayaran di bawah.
         </p>
       </div>
 
-      <Card className="p-4 space-y-2">
+      <Card className="gap-2 p-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold">{planName}</p>
           <p className="text-xs text-muted-foreground">{durationDays} hari</p>

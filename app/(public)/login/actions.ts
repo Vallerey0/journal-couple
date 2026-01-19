@@ -36,23 +36,27 @@ async function ensureTrialSetup(userId: string, fallbackClient: any) {
 
   if (profileErr) return profileErr;
 
-  if (!profile?.trial_started_at) {
+  // kalau profile belum ada -> ini tanda trigger signup->profiles belum jalan
+  if (!profile?.id) {
+    return {
+      message: "Profil belum terbentuk. Coba login ulang setelah aktivasi.",
+    };
+  }
+
+  if (!profile.trial_started_at) {
     const now = new Date();
     const ends = addDays(now, 7).toISOString();
 
-    const { error: upsertErr } = await client.from("profiles").upsert(
-      {
-        id: userId,
-        plan: "trial",
+    const { error: updErr } = await client
+      .from("profiles")
+      .update({
         trial_started_at: now.toISOString(),
         trial_ends_at: ends,
         active_until: ends,
-        subscription_status: "active",
-      },
-      { onConflict: "id" }
-    );
+      })
+      .eq("id", userId);
 
-    if (upsertErr) return upsertErr;
+    if (updErr) return updErr;
   }
 
   return null;
@@ -81,12 +85,10 @@ export async function loginAction(
   if (error) {
     const msg = (error.message || "").toLowerCase();
 
-    // salah kredensial
     if (msg.includes("invalid") || msg.includes("credentials")) {
       return { message: "Email atau password salah." };
     }
 
-    // ✅ belum aktivasi -> redirect supaya LoginPage bisa tampilkan tombol resend
     if (
       msg.includes("confirm") ||
       msg.includes("confirmed") ||
@@ -113,4 +115,3 @@ export async function loginAction(
 
   redirect("/home");
 }
-
