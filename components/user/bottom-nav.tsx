@@ -37,7 +37,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto w-full max-w-md px-4 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
-      <div className="relative rounded-2xl border bg-background/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="relative rounded-2xl border bg-background/95 shadow-sm backdrop-blur">
         <ul className="grid grid-cols-5">
           {NAV.map((item) => {
             const active = isActive(pathname, item);
@@ -48,7 +48,7 @@ export function BottomNav() {
                   href={item.href}
                   className={cn(
                     "flex flex-col items-center gap-1 px-2 py-3 text-xs transition-colors",
-                    active ? "text-foreground" : "text-muted-foreground"
+                    active ? "text-foreground" : "text-muted-foreground",
                   )}
                   aria-current={active ? "page" : undefined}
                 >
@@ -58,7 +58,7 @@ export function BottomNav() {
                   {active ? (
                     <motion.span
                       layoutId="bottom-nav-active"
-                      className="absolute inset-x-3 -bottom-[1px] h-[2px] rounded-full bg-foreground"
+                      className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-foreground"
                       transition={{
                         type: "spring",
                         stiffness: 520,
