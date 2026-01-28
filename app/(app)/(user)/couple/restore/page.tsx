@@ -1,5 +1,5 @@
-import { getArchivedCouples, getActiveCouple } from "@/utils/couples/queries";
-import { restoreCouple } from "@/utils/couples/actions";
+import { getArchivedCouples, getActiveCouple } from "@/lib/couples/queries";
+import { restoreCouple } from "@/lib/couples/actions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";

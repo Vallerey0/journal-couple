@@ -1,86 +1,95 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { GalleryEditButton } from "./gallery-edit-button";
+import { motion, PanInfo } from "framer-motion";
+import { useRef } from "react";
 
 export type GalleryItem = {
   id: string;
-  image_url: string;
+  image_url: string | null;
+  thumbnail_url?: string | null;
   journal_title: string | null;
   journal_text: string | null;
+  display_order?: number;
+  taken_at?: string | null;
+  is_favorite?: boolean;
+  memory_type?: string | null;
 };
 
 export type GalleryCardProps = {
   item: GalleryItem;
   disabled?: boolean;
+  onClick?: () => void;
+  onLongPress?: () => void;
 };
 
-export function GalleryCard({ item, disabled = false }: GalleryCardProps) {
-  const [active, setActive] = useState(false);
+export function GalleryCard({
+  item,
+  disabled = false,
+  onClick,
+  onLongPress,
+}: GalleryCardProps) {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPress = useRef(false);
 
-  function open() {
+  function handleStart() {
     if (disabled) return;
-    setActive(true);
+    isLongPress.current = false;
+    timeoutRef.current = setTimeout(() => {
+      isLongPress.current = true;
+      if (onLongPress) {
+        onLongPress();
+      }
+    }, 500); // 500ms for long press
   }
 
-  function close() {
-    setActive(false);
+  function handleEnd() {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }
+
+  function handleTap() {
+    handleEnd();
+    if (disabled) return;
+    // If it was a long press, do nothing (onLongPress already fired)
+    // If NOT a long press, trigger onClick
+    if (!isLongPress.current) {
+      onClick?.();
+    }
   }
 
   return (
-    <div
-      className="relative aspect-square overflow-hidden rounded-2xl"
-      onClick={open}
-    >
-      {/* IMAGE */}
+    <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted cursor-pointer select-none">
+      {/* IMAGE / PLACEHOLDER */}
       <motion.div
-        animate={
-          active && !disabled
-            ? { scale: 1.04, filter: "blur(4px)" }
-            : { scale: 1, filter: "blur(0px)" }
-        }
-        transition={{ duration: 0.18, ease: "easeOut" }}
+        whileHover={!disabled ? { scale: 1.05 } : {}}
+        whileTap={!disabled ? { scale: 0.95 } : {}}
+        onTapStart={handleStart}
+        onTapCancel={handleEnd}
+        onTap={handleTap}
+        transition={{ duration: 0.2 }}
         className="absolute inset-0"
       >
-        <Image
-          src={item.image_url}
-          alt={item.journal_title ?? "Gallery"}
-          fill
-          className="object-cover"
-        />
+        {item.image_url ? (
+          <Image
+            src={item.thumbnail_url || item.image_url}
+            alt={item.journal_title ?? "Gallery"}
+            fill
+            sizes="(max-width: 768px) 50vw, 33vw"
+            className="object-cover pointer-events-none" // prevent image drag
+            unoptimized
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-xs text-muted-foreground">
+            No image
+          </div>
+        )}
       </motion.div>
 
-      {/* OVERLAY + EDIT */}
-      <AnimatePresence>
-        {active && !disabled && (
-          <motion.div
-            key="overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.25 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="absolute inset-0 z-10 flex items-center justify-center bg-black"
-            onClick={(e) => {
-              e.stopPropagation();
-              close();
-            }}
-          >
-            {/* EDIT BUTTON */}
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-            >
-              <GalleryEditButton item={item} />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* READ-ONLY OVERLAY (GRACE) */}
+      {/* READ-ONLY OVERLAY (GRACE MODE) */}
       {disabled && <div className="absolute inset-0 z-10 bg-black/10" />}
     </div>
   );

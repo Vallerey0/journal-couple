@@ -1,6 +1,7 @@
-import { archiveCouple } from "@/utils/couples/actions";
+import { archiveCouple } from "@/lib/couples/actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Metadata } from "next";
 import {
   ArrowLeft,
   Archive,
@@ -10,6 +11,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Relationship Settings",
+};
 
 export default function CoupleSettingsPage() {
   return (

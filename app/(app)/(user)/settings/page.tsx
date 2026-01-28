@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
-import { formatRemainingFull, formatDateID } from "@/lib/duration";
+import { formatRemainingFull, formatDateID } from "@/utils/duration";
+import { Metadata } from "next";
 import {
   User,
   CreditCard,
@@ -14,10 +15,15 @@ import {
   Sparkles,
   Receipt,
   AlertCircle,
+  Music,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "My Account",
+};
 
 /* ================= Helpers ================= */
 function formatIDR(n: number) {
@@ -334,6 +340,25 @@ export default async function SettingsPage() {
           </h3>
 
           <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 backdrop-blur-xl divide-y divide-white/5">
+            {/* Music Settings */}
+            <Link
+              href="/music"
+              className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500">
+                  <Music className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Musik Latar</p>
+                  <p className="text-xs text-muted-foreground">
+                    Atur playlist dan musik
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </Link>
+
             {/* Billing History */}
             <Link
               href="/settings/billing"

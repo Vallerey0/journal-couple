@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import SnapPayButton from "../SnapPayButton";
@@ -37,7 +37,7 @@ export default async function SubscribePayPage({
       status, midtrans_order_id, midtrans_token, midtrans_redirect_url,
       created_at,
       subscription_plans:plan_id ( name, duration_days )
-    `
+    `,
     )
     .eq("id", intentId)
     .maybeSingle();

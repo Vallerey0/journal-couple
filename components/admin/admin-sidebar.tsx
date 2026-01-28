@@ -6,6 +6,7 @@ import {
   Settings,
   Users,
   BadgeCheck,
+  Music,
 } from "lucide-react";
 
 const NAV = [
@@ -13,6 +14,10 @@ const NAV = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: BadgeCheck },
   { href: "/admin/payments", label: "Payments", icon: CreditCard },
+
+  // 🎵 System-level asset
+  { href: "/admin/default-music", label: "Default Music", icon: Music },
+
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -47,7 +52,7 @@ export function AdminSidebar({
                 "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
                 active
                   ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
               )}
             >
               <Icon className="h-4 w-4" />

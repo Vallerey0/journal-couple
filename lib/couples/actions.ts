@@ -1,10 +1,10 @@
 "use server";
 
 import "server-only";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireActiveSubscription } from "@/utils/subscriptions/guard";
+import { requireActiveSubscription } from "@/lib/subscriptions/guard";
 
 /* =====================================================
    INTERNAL GUARD

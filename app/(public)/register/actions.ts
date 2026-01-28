@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type State = { message?: string };
 
@@ -56,7 +56,7 @@ function mapAuthErrorToMessage(raw: string) {
 
 export async function registerAction(
   _: State,
-  formData: FormData
+  formData: FormData,
 ): Promise<State> {
   const full_name = String(formData.get("full_name") || "").trim();
   const email = String(formData.get("email") || "")

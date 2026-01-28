@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type State = { message?: string; ok?: boolean };
 
@@ -35,7 +35,7 @@ function mapAuthErrorToMessage(raw: string) {
 
 export async function resendActivationAction(
   _: State,
-  formData: FormData
+  formData: FormData,
 ): Promise<State> {
   const email = String(formData.get("email") || "")
     .trim()

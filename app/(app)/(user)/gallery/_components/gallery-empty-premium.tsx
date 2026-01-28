@@ -2,7 +2,7 @@
 
 import { ImagePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GalleryFormSheet } from "./gallery-form-sheet";
+import { GalleryCreateSheet } from "./gallery-create-sheet";
 
 type Props = {
   coupleId?: string;
@@ -21,8 +21,7 @@ export function GalleryEmptyPremium({ coupleId = "" }: Props) {
       </p>
 
       <div className="mt-5">
-        <GalleryFormSheet
-          mode="create"
+        <GalleryCreateSheet
           coupleId={coupleId}
           trigger={
             <Button size="sm" className="rounded-full">

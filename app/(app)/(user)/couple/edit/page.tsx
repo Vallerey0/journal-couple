@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getActiveCouple } from "@/utils/couples/queries";
+import { getActiveCouple } from "@/lib/couples/queries";
 import { CoupleForm } from "../_components/couple-form";
 
 export default async function EditCouplePage() {

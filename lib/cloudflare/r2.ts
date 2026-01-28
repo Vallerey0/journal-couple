@@ -1,5 +1,4 @@
-// utils/r2.ts
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const client = new S3Client({
   region: "auto",
@@ -25,6 +24,15 @@ export async function uploadToR2({
       Key: key,
       Body: body,
       ContentType: contentType,
+    }),
+  );
+}
+
+export async function deleteFromR2(key: string) {
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
     }),
   );
 }

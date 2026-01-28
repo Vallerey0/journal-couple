@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   /** menit */
@@ -65,7 +65,7 @@ export default function AdminIdleLogout({
 
     const onActivity = () => bumpActivity();
     events.forEach((e) =>
-      window.addEventListener(e, onActivity, { passive: true })
+      window.addEventListener(e, onActivity, { passive: true }),
     );
 
     // sync antar tab: kalau tab lain ada aktivitas, tab ini ikut reset timer

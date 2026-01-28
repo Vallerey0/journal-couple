@@ -1,8 +1,17 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/user/bottom-nav";
 import Script from "next/script";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s | Journal Couple",
+    default: "Dashboard | Journal Couple",
+  },
+  description: "Your shared space.",
+};
 
 export default async function UserLayout({
   children,

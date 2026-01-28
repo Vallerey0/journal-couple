@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
 

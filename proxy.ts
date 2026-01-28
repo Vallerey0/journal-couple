@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createMiddlewareClient } from "@/utils/supabase/middleware";
+import { createMiddlewareClient } from "@/lib/supabase/middleware";
 
 // ✅ WAJIB: default export function bernama `proxy`
 export default async function proxy(req: NextRequest) {

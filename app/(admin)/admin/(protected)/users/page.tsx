@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -15,7 +15,7 @@ export default async function AdminUsersPage() {
       trial_ends_at,
       active_until,
       created_at
-    `
+    `,
     )
     .order("created_at", { ascending: false });
 

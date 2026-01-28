@@ -6,8 +6,8 @@ import { SubscribeBanner } from "@/components/user/subscribe-banner";
 import { PlanStatus } from "@/components/user/plan-status";
 import { PaymentNotice } from "@/components/user/payment-notice";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
-import { computePlanStatus } from "@/lib/plan";
-import { createClient } from "@/utils/supabase/server";
+import { computePlanStatus } from "@/utils/plan";
+import { createClient } from "@/lib/supabase/server";
 import HomeAutoRefresh from "./HomeAutoRefresh";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 

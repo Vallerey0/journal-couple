@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createCheckoutIntentAction } from "./actions";
@@ -64,7 +64,7 @@ async function isNewCustomer(admin: AdminClient, userId: string) {
 async function promoApplicable(
   admin: AdminClient,
   promoId: string,
-  planId: string
+  planId: string,
 ) {
   const { data } = await admin
     .from("promotion_plans")
@@ -124,7 +124,7 @@ export default async function SubscribePage() {
   const { data: plans, error: plansErr } = await admin
     .from("subscription_plans")
     .select(
-      "id, name, price_idr, duration_days, description, is_active, sort_order"
+      "id, name, price_idr, duration_days, description, is_active, sort_order",
     )
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
@@ -149,7 +149,7 @@ export default async function SubscribePage() {
       coupon_code,
       created_at,
       subscription_plans:plan_id ( name )
-    `
+    `,
     )
     .eq("user_id", userId)
     .eq("status", "pending")
@@ -163,7 +163,7 @@ export default async function SubscribePage() {
   const { data: promos } = await admin
     .from("promotions")
     .select(
-      "id, discount_percent, start_at, end_at, is_active, archived_at, new_customer_only, max_redemptions, max_redemptions_per_user"
+      "id, discount_percent, start_at, end_at, is_active, archived_at, new_customer_only, max_redemptions, max_redemptions_per_user",
     )
     .eq("is_active", true)
     .is("archived_at", null)
@@ -172,7 +172,7 @@ export default async function SubscribePage() {
   const activePromos = (promos ?? [])
     .filter((p: any) => isActiveWindow(p.start_at, p.end_at))
     .sort(
-      (a: any, b: any) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0)
+      (a: any, b: any) => (b.discount_percent ?? 0) - (a.discount_percent ?? 0),
     ) as PromoRow[];
 
   async function bestDiscountForPlan(planId: string): Promise<number> {

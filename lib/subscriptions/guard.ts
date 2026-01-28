@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 const GRACE_PERIOD_HOURS = 24;
 

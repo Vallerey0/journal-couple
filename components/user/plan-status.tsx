@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { PlanView } from "@/lib/plan";
-import { formatRemainingShort } from "@/lib/duration";
+import type { PlanView } from "@/utils/plan";
+import { formatRemainingShort } from "@/utils/duration";
 
 type Props = {
   view: PlanView;

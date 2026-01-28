@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createAdminClient } from "@/utils/supabase/admin";
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 type State = { message?: string };
 
@@ -64,7 +64,7 @@ async function ensureTrialSetup(userId: string, fallbackClient: any) {
 
 export async function loginAction(
   _: State,
-  formData: FormData
+  formData: FormData,
 ): Promise<State> {
   const email = String(formData.get("email") || "")
     .trim()

@@ -1,76 +1,110 @@
-// app/api/gallery/upload/route.ts
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import sharp from "sharp";
-import { uploadToR2 } from "@/utils/r2";
-import { createClient } from "@/utils/supabase/server";
+import { uploadToR2, deleteFromR2 } from "@/lib/cloudflare/r2";
+import { createClient } from "@/lib/supabase/server";
+
+const MAX_SIZE = 50 * 1024 * 1024; // 50MB (resized by sharp later)
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
 
 export async function POST(req: Request) {
+  let basePath: string | null = null;
+
   try {
+    /* =====================================================
+       PARSE & VALIDATE
+       ===================================================== */
     const form = await req.formData();
-    const file = form.get("file") as File;
-    const coupleId = form.get("couple_id") as string;
+    const file = form.get("file") as File | null;
+    const coupleId = form.get("couple_id") as string | null;
     const journalTitle = form.get("journal_title") as string | null;
     const journalText = form.get("journal_text") as string | null;
+    const takenAt = form.get("taken_at") as string | null;
+    const isFavorite = form.get("is_favorite") === "true";
+    const memoryType = form.get("memory_type") as string | null;
 
     if (!file || !coupleId) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const galleryId = nanoid();
+    // 1. Validate File Size
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json(
+        { error: "File too large (max 50MB)" },
+        { status: 413 },
+      );
+    }
 
-    const basePath = `couples/${coupleId}/gallery/${galleryId}`;
+    // 2. Validate File Type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: "Invalid file type. Only JPG, PNG, WEBP, HEIC allowed." },
+        { status: 415 },
+      );
+    }
 
-    // 1️⃣ ORIGINAL (ASLI)
-    await uploadToR2({
-      key: `${basePath}/original.jpg`,
-      body: buffer,
-      contentType: file.type,
-    });
-
-    // 2️⃣ DISPLAY (untuk animasi)
-    const display = await sharp(buffer)
-      .resize({ width: 1200 })
-      .jpeg({ quality: 85 })
-      .toBuffer();
-
-    await uploadToR2({
-      key: `${basePath}/display.webp`,
-      body: display,
-      contentType: "image/webp",
-    });
-
-    // 3️⃣ THUMB (grid)
-    const thumb = await sharp(buffer)
-      .resize({ width: 400 })
-      .webp({ quality: 75 })
-      .toBuffer();
-
-    await uploadToR2({
-      key: `${basePath}/thumb.webp`,
-      body: thumb,
-      contentType: "image/webp",
-    });
-
-    // 4️⃣ BLUR PREVIEW
-    const preview = await sharp(buffer)
-      .resize({ width: 40 })
-      .blur(20)
-      .webp({ quality: 30 })
-      .toBuffer();
-
-    await uploadToR2({
-      key: `${basePath}/preview.webp`,
-      body: preview,
-      contentType: "image/webp",
-    });
-
-    // 5️⃣ SIMPAN METADATA KE DB
+    /* =====================================================
+       AUTH
+       ===================================================== */
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    // Get max display_order
-    const { data: maxOrderData } = await supabase
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    /* =====================================================
+       PROCESS IMAGES (SHARP)
+       ===================================================== */
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const timestamp = Date.now();
+    const mediaId = nanoid(8);
+    const userId = user.id;
+
+    // Path structure: users/{user_id}/couples/{couple_id}/gallery/images/{uuid}/
+    basePath = `users/${userId}/couples/${coupleId}/gallery/images/${timestamp}_${mediaId}`;
+
+    // A. Display (1200px, quality 80)
+    const displayBuffer = await sharp(buffer)
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+
+    // B. Thumb (400px, quality 70)
+    const thumbBuffer = await sharp(buffer)
+      .resize({ width: 400, withoutEnlargement: true })
+      .webp({ quality: 70 })
+      .toBuffer();
+
+    /* =====================================================
+       UPLOAD TO R2
+       ===================================================== */
+    await Promise.all([
+      uploadToR2({
+        key: `${basePath}/display.webp`,
+        body: displayBuffer,
+        contentType: "image/webp",
+      }),
+      uploadToR2({
+        key: `${basePath}/thumb.webp`,
+        body: thumbBuffer,
+        contentType: "image/webp",
+      }),
+    ]);
+
+    /* =====================================================
+       DATABASE INSERT
+       ===================================================== */
+    // Get display order
+    const { data: maxOrder } = await supabase
       .from("gallery_items")
       .select("display_order")
       .eq("couple_id", coupleId)
@@ -78,44 +112,47 @@ export async function POST(req: Request) {
       .limit(1)
       .maybeSingle();
 
-    const nextOrder = (maxOrderData?.display_order ?? 0) + 1;
-    const r2Domain = process.env.NEXT_PUBLIC_R2_DOMAIN || "";
-    const imageUrl = r2Domain
-      ? `${r2Domain}/${basePath}/display.webp`
-      : `/${basePath}/display.webp`;
+    // Start from 0 (consistent with frontend reorder logic)
+    const nextOrder = (maxOrder?.display_order ?? -1) + 1;
+    const displayPath = `${basePath}/display.webp`;
 
     const { error } = await supabase.from("gallery_items").insert({
       couple_id: coupleId,
-      image_path: `${basePath}/display.webp`,
-      image_url: imageUrl,
+      image_path: displayPath,
       display_order: nextOrder,
       journal_title: journalTitle,
       journal_text: journalText,
+      taken_at: takenAt || null,
+      is_favorite: isFavorite,
+      memory_type: memoryType || null,
       is_primary: false,
       allow_flip: true,
       is_visible: true,
       is_locked: false,
-      is_favorite: false,
     });
 
-    if (error) {
-      console.error("Supabase insert error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) throw error;
 
     return NextResponse.json({
-      gallery_id: galleryId,
-      paths: {
-        original: `${basePath}/original.jpg`,
-        display: `${basePath}/display.webp`,
-        thumb: `${basePath}/thumb.webp`,
-        preview: `${basePath}/preview.webp`,
-      },
+      success: true,
+      media_id: mediaId,
+      image_path: displayPath,
     });
-  } catch (error: any) {
-    console.error("Upload error:", error);
+  } catch (err: any) {
+    console.error("Upload image error:", err);
+
+    /* =====================================================
+       ROLLBACK
+       ===================================================== */
+    if (basePath) {
+      await Promise.allSettled([
+        deleteFromR2(`${basePath}/display.webp`),
+        deleteFromR2(`${basePath}/thumb.webp`),
+      ]);
+    }
+
     return NextResponse.json(
-      { error: error?.message || "Internal Server Error" },
+      { error: err?.message || "Internal Server Error" },
       { status: 500 },
     );
   }

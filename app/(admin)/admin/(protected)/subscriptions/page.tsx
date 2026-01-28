@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +62,7 @@ function nowJakartaDatetimeLocal() {
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
 
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get(
-    "minute"
+    "minute",
   )}`;
 }
 
@@ -79,14 +79,14 @@ export default async function AdminSubscriptionsPage({
   const { data: plans, error: plansErr } = await supabase
     .from("subscription_plans")
     .select(
-      "id, code, name, price_idr, duration_days, is_active, sort_order, description, created_at"
+      "id, code, name, price_idr, duration_days, is_active, sort_order, description, created_at",
     )
     .order("sort_order", { ascending: true });
 
   const promoQuery = supabase
     .from("promotions")
     .select(
-      "id, name, description, code, discount_percent, start_at, end_at, is_active, new_customer_only, max_redemptions, archived_at, created_at"
+      "id, name, description, code, discount_percent, start_at, end_at, is_active, new_customer_only, max_redemptions, archived_at, created_at",
     )
     .order("created_at", { ascending: false });
 
@@ -171,9 +171,8 @@ export default async function AdminSubscriptionsPage({
       const promoName =
         (activePromos ?? []).find((p: any) => p.id === info.promotion_id)
           ?.name ?? "promo lain";
-      msgMap[
-        planId
-      ] = `Plan ini masih punya promo aktif: "${promoName}". Archive/akhiri promo itu dulu.`;
+      msgMap[planId] =
+        `Plan ini masih punya promo aktif: "${promoName}". Archive/akhiri promo itu dulu.`;
     }
 
     return { ids, msgMap };

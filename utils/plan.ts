@@ -1,4 +1,4 @@
-import { formatDateID, formatRemainingFull } from "@/lib/duration";
+import { formatDateID, formatRemainingFull } from "@/utils/duration";
 
 /* ================= TYPES ================= */
 export type PlanView = "premium" | "trial" | "expired";

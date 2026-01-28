@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
-  Heart,
   Home,
+  BookOpen,
   Image as ImageIcon,
-  MapPin,
+  Heart,
   Settings,
 } from "lucide-react";
 
@@ -23,7 +23,7 @@ const NAV: NavItem[] = [
   { href: "/home", label: "Home", Icon: Home, match: "exact" },
   { href: "/couple", label: "Couple", Icon: Heart, match: "prefix" },
   { href: "/gallery", label: "Gallery", Icon: ImageIcon, match: "prefix" },
-  { href: "/traveling", label: "Travel", Icon: MapPin, match: "prefix" },
+  { href: "/story", label: "Story", Icon: BookOpen, match: "prefix" },
   { href: "/settings", label: "Settings", Icon: Settings, match: "prefix" },
 ];
 

@@ -1,8 +1,14 @@
-import { getActiveCouple } from "@/utils/couples/queries";
-import { createClient } from "@/utils/supabase/server";
-import { computePlanStatus } from "@/lib/plan";
+import { getActiveCouple } from "@/lib/couples/queries";
+import { createClient } from "@/lib/supabase/server";
+import { computePlanStatus } from "@/utils/plan";
+import { Metadata } from "next";
 
 import { SubscribeBanner } from "@/components/user/subscribe-banner";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+};
+
 import { CoupleEmpty } from "./_components/couple-empty";
 import { CoupleDashboard } from "./_components/couple-dashboard";
 

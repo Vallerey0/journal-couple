@@ -1,13 +1,13 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 type State = { message?: string };
 
 export async function resetPasswordAction(
   _: State,
-  formData: FormData
+  formData: FormData,
 ): Promise<State> {
   const password = String(formData.get("password") || "");
   const confirm = String(formData.get("confirm_password") || "");

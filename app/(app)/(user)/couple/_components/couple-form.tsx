@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { saveCouple } from "@/utils/couples/actions";
+import { saveCouple } from "@/lib/couples/actions";
 
 /* ================= TYPES ================= */
 type Mode = "create" | "edit";

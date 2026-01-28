@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/utils/auth/requireAdmin";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const gate = await requireAdmin();
   if (!gate.ok) {
     return NextResponse.json(
       { error: "Forbidden", reason: gate.reason },
-      { status: gate.reason === "UNAUTH" ? 401 : 403 }
+      { status: gate.reason === "UNAUTH" ? 401 : 403 },
     );
   }
 

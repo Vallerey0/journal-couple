@@ -1,4 +1,4 @@
-import { deleteArchivedCouple } from "@/utils/couples/actions";
+import { deleteArchivedCouple } from "@/lib/couples/actions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

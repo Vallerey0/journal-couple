@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 function toInt(v: FormDataEntryValue | null, fallback = 0) {
   const n = Number(String(v ?? ""));
@@ -117,7 +117,7 @@ export async function updatePlanAction(formData: FormData): Promise<void> {
 }
 
 export async function togglePlanActiveAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<void> {
   const supabase = await createClient();
 
@@ -141,7 +141,7 @@ export async function togglePlanActiveAction(
 async function syncPromotionPlans(
   supabase: any,
   promotionId: string,
-  selectedPlanIds: string[]
+  selectedPlanIds: string[],
 ) {
   // bersihkan dulu
   const { error: delErr } = await supabase
@@ -254,7 +254,7 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
   const { data: existing, error: exErr } = await supabase
     .from("promotions")
     .select(
-      "id, name, description, code, discount_percent, start_at, end_at, new_customer_only, max_redemptions, archived_at"
+      "id, name, description, code, discount_percent, start_at, end_at, new_customer_only, max_redemptions, archived_at",
     )
     .eq("id", id)
     .maybeSingle();
@@ -358,7 +358,7 @@ export async function updatePromotionAction(formData: FormData): Promise<void> {
 }
 
 export async function archivePromotionAction(
-  formData: FormData
+  formData: FormData,
 ): Promise<void> {
   const supabase = await createClient();
 
