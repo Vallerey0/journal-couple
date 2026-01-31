@@ -59,7 +59,7 @@ export default async function CouplePage() {
 
   /* ================= MAIN ================= */
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative w-full bg-background">
       {/* BACKGROUND BLOBS */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
@@ -67,7 +67,7 @@ export default async function CouplePage() {
         <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000" />
       </div>
 
-      <div className="relative z-10 p-4 pb-10">
+      <div className="relative z-10 pt-2 space-y-6">
         {showSubscribeBanner && <SubscribeBanner />}
         <CoupleDashboard couple={couple} locked={!subscriptionAllowed} />
       </div>

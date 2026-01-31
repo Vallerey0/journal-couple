@@ -7,14 +7,20 @@ const nextConfig = {
   },
 
   images: {
-    remotePatterns: process.env.NEXT_PUBLIC_R2_DOMAIN
-      ? [
-          {
-            protocol: "https",
-            hostname: new URL(process.env.NEXT_PUBLIC_R2_DOMAIN).hostname,
-          },
-        ]
-      : [],
+    remotePatterns: [
+      ...(process.env.NEXT_PUBLIC_R2_DOMAIN
+        ? [
+            {
+              protocol: "https",
+              hostname: new URL(process.env.NEXT_PUBLIC_R2_DOMAIN).hostname,
+            },
+          ]
+        : []),
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+    ],
   },
 };
 

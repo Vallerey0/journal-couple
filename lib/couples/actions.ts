@@ -18,6 +18,48 @@ async function guardSubscription() {
 }
 
 /* =====================================================
+   SLUG HELPERS
+   ===================================================== */
+function normalizeSlug(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "") // Hapus karakter spesial
+    .replace(/\s+/g, "-") // Spasi jadi dash
+    .replace(/-+/g, "-"); // Collapse multiple dash
+}
+
+function takeFirstWords(name: string, count = 2) {
+  return name.trim().split(/\s+/).slice(0, count).join(" ");
+}
+
+async function generateUniqueCoupleSlug(
+  supabase: any,
+  maleName: string,
+  femaleName: string,
+) {
+  const malePart = normalizeSlug(takeFirstWords(maleName, 2));
+  const femalePart = normalizeSlug(takeFirstWords(femaleName, 2));
+  const baseSlug = `${malePart}-${femalePart}`;
+
+  let candidate = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const { data } = await supabase
+      .from("couples")
+      .select("id")
+      .eq("slug", candidate)
+      .maybeSingle();
+
+    if (!data) return candidate;
+
+    counter++;
+    candidate = `${baseSlug}-${counter}`;
+  }
+}
+
+/* =====================================================
    SAVE / UPDATE COUPLE
    ===================================================== */
 export async function saveCouple(formData: FormData): Promise<void> {
@@ -79,6 +121,16 @@ export async function saveCouple(formData: FormData): Promise<void> {
   const show_age = formData.get("show_age") === "on";
   const show_zodiac = formData.get("show_zodiac") === "on";
 
+  /* ---------- THEME SYNC ---------- */
+  // Get theme from profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("theme_code")
+    .eq("id", user.id)
+    .single();
+
+  const theme_code = profile?.theme_code || "aether";
+
   /* ---------- PAYLOAD ---------- */
   const payload = {
     user_id: user.id,
@@ -104,6 +156,8 @@ export async function saveCouple(formData: FormData): Promise<void> {
     show_age,
     show_zodiac,
 
+    theme_code, // Sync theme code
+
     updated_at: new Date().toISOString(),
   };
 
@@ -118,11 +172,95 @@ export async function saveCouple(formData: FormData): Promise<void> {
   if (existingCouple) {
     await supabase.from("couples").update(payload).eq("id", existingCouple.id);
   } else {
-    await supabase.from("couples").insert(payload);
+    // Generate SLUG only on insert
+    const slug = await generateUniqueCoupleSlug(
+      supabase,
+      male_name,
+      female_name,
+    );
+    await supabase.from("couples").insert({ ...payload, slug });
   }
 
   revalidatePath("/couple");
   redirect("/couple");
+}
+
+/* =====================================================
+   UPDATE COUPLE SLUG
+   ===================================================== */
+export async function updateCoupleSlug(
+  coupleId: string,
+  newSlug: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+
+  /* ---------- AUTH ---------- */
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  /* ---------- VALIDATION ---------- */
+  const normalized = normalizeSlug(newSlug);
+
+  if (!normalized || normalized.length < 3) {
+    return { success: false, error: "Slug minimal 3 karakter" };
+  }
+
+  const RESERVED_SLUGS = new Set([
+    "login",
+    "register",
+    "home",
+    "settings",
+    "subscribe",
+    "api",
+    "_next",
+  ]);
+
+  if (RESERVED_SLUGS.has(normalized)) {
+    return { success: false, error: "Slug ini tidak boleh digunakan" };
+  }
+
+  /* ---------- CHECK OWNERSHIP ---------- */
+  const { data: couple } = await supabase
+    .from("couples")
+    .select("id")
+    .eq("id", coupleId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!couple) {
+    return { success: false, error: "Couple tidak ditemukan" };
+  }
+
+  /* ---------- CHECK UNIQUENESS ---------- */
+  const { data: existing } = await supabase
+    .from("couples")
+    .select("id")
+    .eq("slug", normalized)
+    .neq("id", coupleId) // Allow same slug if it's the current couple (though UI shouldn't trigger this)
+    .maybeSingle();
+
+  if (existing) {
+    return { success: false, error: "Slug sudah dipakai couple lain" };
+  }
+
+  /* ---------- UPDATE ---------- */
+  const { error } = await supabase
+    .from("couples")
+    .update({ slug: normalized, updated_at: new Date().toISOString() })
+    .eq("id", coupleId);
+
+  if (error) {
+    console.error("[updateCoupleSlug]", error);
+    return { success: false, error: "Gagal mengupdate slug" };
+  }
+
+  revalidatePath("/home");
+  return { success: true };
 }
 
 /* =====================================================

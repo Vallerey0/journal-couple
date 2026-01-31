@@ -14,8 +14,8 @@ import {
   ChevronRight,
   Sparkles,
   Receipt,
-  AlertCircle,
   Music,
+  Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -340,6 +340,25 @@ export default async function SettingsPage() {
           </h3>
 
           <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 backdrop-blur-xl divide-y divide-white/5">
+            {/* Theme Settings */}
+            <Link
+              href="/settings/theme"
+              className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Tema Jurnal</p>
+                  <p className="text-xs text-muted-foreground">
+                    Ganti tampilan dan nuansa
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </Link>
+
             {/* Music Settings */}
             <Link
               href="/music"

@@ -10,12 +10,12 @@ type Props = {
 };
 
 export function PlanStatus({ view, note, activeUntil }: Props) {
-  const styles =
+  const textStyles =
     view === "premium"
-      ? "border-foreground/20 bg-foreground/5 text-foreground"
+      ? "text-foreground"
       : view === "trial"
-        ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-        : "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-red-600 dark:text-red-400";
 
   let title: string;
   let subtitle: string;
@@ -36,14 +36,21 @@ export function PlanStatus({ view, note, activeUntil }: Props) {
     <Link
       href="/subscribe"
       className={cn(
-        "mb-2 block rounded-xl border px-3 py-2",
-        "transition-colors hover:bg-muted/50",
-        styles,
+        "block w-full rounded-[28px] px-5 py-4",
+        "transition-all active:scale-[0.98]",
+        textStyles,
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-medium">{title}</span>
-        <span className="text-xs text-muted-foreground">{subtitle}</span>
+        <div className="flex items-center gap-2">
+          {view === "premium" && (
+            <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse" />
+          )}
+          <span className="text-base font-bold tracking-tight">{title}</span>
+        </div>
+        <span className="text-xs font-medium opacity-70 uppercase tracking-wide">
+          {subtitle}
+        </span>
       </div>
     </Link>
   );
