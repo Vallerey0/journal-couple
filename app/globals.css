@@ -46,6 +46,23 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+@layer base {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  /* html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  } */
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  /* Firefox */
+  /* IE and Edge */
+  /* html,
+  body {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+  } */
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);

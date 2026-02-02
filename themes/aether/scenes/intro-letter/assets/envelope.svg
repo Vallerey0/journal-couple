@@ -1,0 +1,30 @@
+<svg width="300" height="200" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- ENVELOPE BODY -->
+  <g id="envelope-body">
+    <!-- Base Rectangle -->
+    <rect width="300" height="200" rx="4" fill="#FCE7F3"/> <!-- Pink 100 -->
+    
+    <!-- Left Fold -->
+    <path d="M0 0 L150 110 L0 200 V0 Z" fill="#FBCFE8"/> <!-- Pink 200 -->
+    
+    <!-- Right Fold -->
+    <path d="M300 0 L150 110 L300 200 V0 Z" fill="#FBCFE8"/> <!-- Pink 200 -->
+    
+    <!-- Bottom Fold -->
+    <path d="M0 200 L150 90 L300 200 H0 Z" fill="#F9A8D4"/> <!-- Pink 300 -->
+  </g>
+
+  <!-- ENVELOPE FLAP -->
+  <!-- Transform origin is top-center (150, 0) for opening animation -->
+  <g id="envelope-flap" style="transform-origin: 150px 0px;">
+    <!-- Flap Triangle -->
+    <path d="M0 0 L150 110 L300 0 H0 Z" fill="#F9A8D4"/> <!-- Pink 300 -->
+    <!-- Slight Highlight/Shadow for depth -->
+    <path d="M0 0 L150 110 L300 0" stroke="#EC4899" stroke-width="1" stroke-opacity="0.3"/>
+    
+    <!-- Heart Pin / Seal -->
+    <g transform="translate(150, 85)">
+        <path d="M0 10 C-10 -5 -25 5 -12 20 L0 32 L12 20 C25 5 10 -5 0 10 Z" fill="#BE185D" stroke="#9D174D" stroke-width="2"/>
+    </g>
+  </g>
+</svg>

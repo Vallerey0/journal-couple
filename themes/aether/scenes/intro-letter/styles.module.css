@@ -1,0 +1,242 @@
+.sceneContainer {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 50;
+  background-color: #000;
+}
+
+.backgroundLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.backgroundImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+
+.starCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5; /* Between background image and envelope */
+  pointer-events: none;
+}
+
+/* Container for the whole envelope assembly */
+.envelopeWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* No translate here, handled by GSAP or centered manually */
+  width: 300px;
+  height: 200px;
+  z-index: 10;
+  perspective: 1000px; /* For 3D flap rotation */
+  opacity: 0; /* Initial state hidden to prevent flash */
+  will-change: transform, opacity;
+}
+
+.envelopeBack {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #FCE7F3; /* Pink 100 */
+  border-radius: 4px;
+  z-index: 1;
+}
+
+.paperContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Center alignment */
+  width: min(90vw, 400px); /* Final Reading Width */
+  height: min(75vh, 600px); /* Final Reading Height */
+  z-index: 2; /* Between Back and Front */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform-origin: center center; /* Scale from center */
+  background-color: #fffcf5; /* Cream paper background */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  will-change: transform;
+}
+
+.paperImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Cover to fill container */
+  opacity: 0.15; /* Subtle texture */
+  pointer-events: none;
+}
+
+.paperContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 30px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align to top to allow scrolling from top */
+  align-items: center;
+  z-index: 10;
+  opacity: 0; /* Fade in later */
+  overflow-y: auto;
+  /* Hide scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.paperContent::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.lightOrb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0.8);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.paperContent::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+.letterBody {
+  width: 100%;
+  max-width: 100%;
+  text-align: center;
+  padding-bottom: 20px;
+}
+
+.coupleName {
+  font-family: var(--font-dancing);
+  font-size: 2rem;
+  color: #1a1a1a;
+  text-align: center;
+  margin: 0 0 1rem 0;
+  line-height: 1.2;
+  opacity: 0; /* Hidden initially for handwriting effect */
+}
+
+.letterDetails {
+  font-family: var(--font-dancing);
+  font-size: 1.1rem;
+  color: #4a4a4a;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.letterDetails p {
+  margin: 0;
+  line-height: 1.4;
+  opacity: 0; /* Hidden initially for handwriting effect */
+}
+
+.note {
+  margin-top: 1rem !important;
+  font-style: italic;
+  color: #666;
+}
+
+.envelopeFront {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3; /* Above Paper */
+  pointer-events: none;
+}
+
+.envelopeFlap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%; /* SVG is same size */
+  z-index: 4; /* Topmost initially */
+  transform-origin: 150px 0; /* Top Center */
+  pointer-events: none;
+}
+
+.heartSeal {
+  cursor: pointer;
+  pointer-events: auto; /* Enable clicks on the heart group */
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulseHeart 1.5s infinite ease-in-out;
+}
+
+.heartSeal:hover {
+  filter: drop-shadow(0 0 5px rgba(190, 24, 93, 0.6));
+}
+
+@keyframes pulseHeart {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.canvasLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 60; /* Above paper */
+  pointer-events: none;
+}
+
+/* Loading State */
+.loadingContainer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+  z-index: 100;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
