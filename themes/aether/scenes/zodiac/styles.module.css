@@ -9,6 +9,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  touch-action: pan-y; /* Allow vertical pan for card scroll (PC + mobile) */
   /* Hide scrollbar */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
@@ -100,9 +101,9 @@
   align-items: center;
   width: 92%;
   max-width: 400px;
-  max-height: 50vh; /* Adjusted for new position */
-  overflow-y: auto; /* Allow scrolling content if it gets too tall */
-  scrollbar-width: none;
+  max-height: 40vh; /* Reduced from 50vh for mobile as requested */
+  overflow: hidden; /* Prevent container scroll */
+  pointer-events: auto; /* Ensure pointer events work */
 }
 
 .zodiacContainer::-webkit-scrollbar {
@@ -126,13 +127,17 @@
   -webkit-backdrop-filter: blur(16px);
   position: relative;
   overflow: hidden;
+  max-height: 100%;
 }
 
 /* Internal Scrollable Content */
 .cardContent {
-  max-height: 60vh;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 8px;
+  pointer-events: auto;
+  touch-action: pan-y;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -306,6 +311,10 @@
   .zodiacContainer {
     width: 700px;
     max-width: 90%;
+    max-height: 70vh; /* Restore height for desktop */
+    /* Fix overlap and cutoff on desktop */
+    top: 55%;
+    transform: translate(-50%, -50%);
   }
   
   .unifiedCard {
@@ -347,9 +356,10 @@
   }
   
   .zodiacRing {
-    top: 50%;
-    width: 500px;
-    height: 500px;
+    /* Move ring up on desktop to avoid stacking/clashing with card */
+    top: 35%;
+    width: 480px;
+    height: 480px;
   }
 }
 

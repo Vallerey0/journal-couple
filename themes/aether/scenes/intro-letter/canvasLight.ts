@@ -2,17 +2,31 @@ export function triggerLightBurst(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  // Set canvas size
+  // Set canvas size only if needed to avoid clearing/layout thrashing
   const width = window.innerWidth;
   const height = window.innerHeight;
-  canvas.width = width;
-  canvas.height = height;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
 
   // Configuration
-  const particleCount = 30; // Reduced from 60 for performance
+  const particleCount = 20; // Reduced further for mobile smoothness
   const particles: Particle[] = [];
   const centerX = width / 2;
   const centerY = height / 2;
+
+  // Pre-create gradient for flash to avoid recreating it every frame
+  const flashGradient = ctx.createRadialGradient(
+    centerX,
+    centerY,
+    0,
+    centerX,
+    centerY,
+    Math.max(width, height) / 1.5, // Reduced radius for performance
+  );
+  flashGradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+  flashGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
 
   // Particle Class
   class Particle {
@@ -76,19 +90,11 @@ export function triggerLightBurst(canvas: HTMLCanvasElement) {
     // Draw Flash
     if (flashOpacity > 0) {
       ctx.globalCompositeOperation = "source-over";
-      const gradient = ctx.createRadialGradient(
-        centerX,
-        centerY,
-        0,
-        centerX,
-        centerY,
-        width / 2,
-      );
-      gradient.addColorStop(0, `rgba(255, 255, 255, ${flashOpacity})`);
-      gradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = gradient;
+      ctx.globalAlpha = flashOpacity;
+      ctx.fillStyle = flashGradient;
       ctx.fillRect(0, 0, width, height);
-      flashOpacity -= 0.05;
+      ctx.globalAlpha = 1; // Reset
+      flashOpacity -= 0.08; // Faster fade out to reduce heavy frame count
     }
 
     // Draw Particles

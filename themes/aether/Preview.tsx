@@ -3,6 +3,8 @@
 
 import IntroLetter from "./scenes/intro-letter";
 import ZodiacScene from "./scenes/zodiac";
+import GalleryScene from "./scenes/gallery";
+import { getPublicMediaUrl } from "@/lib/media/url";
 
 // Using the actual schema from the project but mapping it to the PreviewProps
 // structure the user requested.
@@ -33,21 +35,35 @@ type PreviewProps = {
 };
 
 export default function Preview({ data }: PreviewProps) {
+  // Map gallery data to the format expected by GalleryScene
+  const galleryItems = (data.gallery || []).map((item: any) => ({
+    image: getPublicMediaUrl(item.image_path) || "",
+    title: item.journal_title || "",
+    date: item.taken_at || "",
+    description: item.journal_text || "",
+  }));
+
   return (
     <main>
-      {/* Scene 1: Intro Letter */}
-      {/* <IntroLetter couple={data} /> */}
+      {/* Scene 1: Intro */}
+      <section id="intro">
+        <IntroLetter couple={data} />
+      </section>
 
       {/* Scene 2: Zodiac */}
-      <ZodiacScene
-        male_birthdate={data.male_birth_date || ""}
-        female_birthdate={data.female_birth_date || ""}
-        male_name={data.male_name}
-        female_name={data.female_name}
-      />
+      <section id="zodiac">
+        <ZodiacScene
+          male_birthdate={data.male_birth_date || ""}
+          female_birthdate={data.female_birth_date || ""}
+          male_name={data.male_name}
+          female_name={data.female_name}
+        />
+      </section>
 
-      {/* Scene berikutnya nanti di bawah */}
-      {/* <GalleryScene /> */}
+      {/* Scene 3: Gallery */}
+      <section id="gallery">
+        <GalleryScene gallery={galleryItems} />
+      </section>
     </main>
   );
 }

@@ -8,6 +8,7 @@ interface Refs {
   zodiacContainer: HTMLDivElement;
   zodiacRing: HTMLDivElement;
   unifiedCard: HTMLDivElement;
+  cardContent: HTMLDivElement;
   compatibilitySection: HTMLDivElement;
   canvas: HTMLCanvasElement;
   lightCanvas: HTMLCanvasElement;
@@ -27,24 +28,13 @@ export const buildZodiacTimeline = (
   });
 
   // 1. PHASE 1: FALLING LIGHT (Transition from Intro)
-  // Lock scroll immediately
-  tl.call(
-    () => {
-      document.body.style.overflow = "hidden";
-    },
-    undefined,
-    0,
-  );
-
-  // Simulate "paper crumbling into light" by starting with a falling stream
 
   // Background Settle (simulate landing from warp)
   tl.fromTo(
     refs.background,
-    { scale: 1.2, filter: "blur(10px)", opacity: 0.8 },
+    { scale: 1.2, opacity: 0.8 },
     {
       scale: 1,
-      filter: "blur(0px)",
       opacity: 1,
       duration: 2.0,
       ease: "power2.out",
@@ -143,11 +133,11 @@ export const buildZodiacTimeline = (
       lightSystem?.setMode("idle");
     },
     undefined,
-    4.0,
+    2.8,
   );
 
   // Reveal cards from center
-  tl.set(refs.zodiacContainer, { opacity: 1 });
+  // tl.set(refs.zodiacContainer, { opacity: 1 }); // Removed redundant set
 
   tl.fromTo(
     refs.unifiedCard,
@@ -160,44 +150,38 @@ export const buildZodiacTimeline = (
       y: 0,
       opacity: 1,
       scale: 1,
-      duration: 1.2,
+      duration: 0.8, // Faster reveal
       ease: "back.out(1.2)",
     },
-    4.0,
+    2.8, // Start earlier
   );
 
-  // 5. PHASE 5: SLOW SPIN (Continuous)
-  tl.to(
-    refs.zodiacRing,
-    {
-      rotation: "+=360",
-      duration: 60, // Very slow continuous spin
-      repeat: -1,
-      ease: "linear",
-    },
-    4.0,
-  );
+  // 5. PHASE 5: SLOW SPIN (Continuous) - Removed from main timeline for scrub control
 
   // 6. PHASE 6: COMPATIBILITY REVEAL
-  tl.to(
+  tl.fromTo(
     refs.compatibilitySection,
+    { opacity: 0, y: 10 },
     {
       opacity: 1,
       y: 0,
-      duration: 1.5,
-      delay: 0.5,
+      duration: 0.8, // Faster reveal
     },
-    5.0,
+    3.0, // Almost simultaneous with card
   );
 
-  // 7. UNLOCK SCROLL
-  tl.call(
-    () => {
-      document.body.style.overflow = "auto";
-    },
-    undefined,
-    5.5,
-  );
+  // 7. BUFFER PHASE (Hold state for content scrolling)
+  // This ensures the timeline doesn't finish (and unpin) immediately after visuals
+  tl.to({}, { duration: 2.0 });
 
   return tl;
+};
+
+export const createInfiniteSpin = (ring: HTMLDivElement) => {
+  return gsap.to(ring, {
+    rotation: "+=360",
+    duration: 60,
+    repeat: -1,
+    ease: "linear",
+  });
 };

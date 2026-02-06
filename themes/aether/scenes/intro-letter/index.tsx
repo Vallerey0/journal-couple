@@ -153,8 +153,13 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
         // 1. Crumple Paper & Reveal Light
         exitTl
-          .to(
+          .fromTo(
             envelopeWrapperRef.current,
+            {
+              scale: 1,
+              rotation: 0,
+              opacity: 1,
+            },
             {
               scale: 0,
               rotation: 360,
@@ -265,7 +270,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
           autoScrollTriggered.current = true;
           gsap.to(window, {
             scrollTo: 0,
-            duration: 5,
+            duration: 2,
             ease: "power2.inOut",
             onComplete: () => {
               autoScrollTriggered.current = false;
@@ -315,6 +320,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         if (shouldTrigger) {
           e.preventDefault();
           autoScrollTriggered.current = true;
+          // Calculate distance to end of pinned section + viewport height
           const totalScrollDistance = 2000 + 2000 + window.innerHeight;
 
           gsap.to(window, {
@@ -322,7 +328,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
               y: `+=${totalScrollDistance}`,
               autoKill: false,
             },
-            duration: 5,
+            duration: 3, // Slightly faster than before (was 5)
             ease: "power2.inOut",
             onComplete: () => {
               autoScrollTriggered.current = false;
@@ -375,7 +381,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
               y: `+=${totalScrollDistance}`,
               autoKill: false,
             },
-            duration: 5,
+            duration: 3,
             ease: "power2.inOut",
             onComplete: () => {
               autoScrollTriggered.current = false;
@@ -395,7 +401,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
               y: `+=${totalScrollDistance}`,
               autoKill: false,
             },
-            duration: 5,
+            duration: 3,
             ease: "power2.inOut",
             onComplete: () => {
               autoScrollTriggered.current = false;
@@ -416,7 +422,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         autoScrollTriggered.current = true;
         gsap.to(window, {
           scrollTo: 0,
-          duration: 5,
+          duration: 2,
           ease: "power2.inOut",
           onComplete: () => {
             autoScrollTriggered.current = false;
@@ -441,7 +447,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
     };
-  }, [isMounted, isCompleted]); // Added isCompleted dependency
+  }, [isMounted, isCompleted]);
 
   const handleTap = () => {
     if (timelineRef.current && timelineRef.current.paused()) {
@@ -594,12 +600,73 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <defs>
+            <linearGradient
+              id="purpleGradient"
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="200"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop stopColor="#4C1D95" />
+              <stop offset="1" stopColor="#2E1065" />
+            </linearGradient>
+            <linearGradient id="goldGradient" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#FCD34D" />
+              <stop offset="0.5" stopColor="#D97706" />
+              <stop offset="1" stopColor="#FCD34D" />
+            </linearGradient>
+          </defs>
+
           {/* Left Fold */}
-          <path d="M0 0 L150 110 L0 200 V0 Z" fill="#FBCFE8" />
+          <path d="M0 0 L150 115 L0 200 V0 Z" fill="#6D28D9" />
           {/* Right Fold */}
-          <path d="M300 0 L150 110 L300 200 V0 Z" fill="#FBCFE8" />
+          <path d="M300 0 L150 115 L300 200 V0 Z" fill="#6D28D9" />
           {/* Bottom Fold */}
-          <path d="M0 200 L150 90 L300 200 H0 Z" fill="#F9A8D4" />
+          <path d="M0 200 L150 100 L300 200 H0 Z" fill="#5B21B6" />
+
+          {/* Gold Trim */}
+          <path
+            d="M0 200 L150 100 L300 200"
+            stroke="url(#goldGradient)"
+            strokeWidth="1.5"
+            fill="none"
+          />
+
+          {/* Floral Decorations - Bottom Left */}
+          <g opacity="0.9">
+            <path
+              d="M5 195 Q25 195 35 175 M5 195 Q15 175 5 155 M5 195 Q45 198 65 190"
+              stroke="url(#goldGradient)"
+              strokeWidth="1.5"
+              fill="none"
+            />
+            <circle cx="35" cy="175" r="2.5" fill="url(#goldGradient)" />
+            <circle cx="5" cy="155" r="2" fill="url(#goldGradient)" />
+            <circle cx="65" cy="190" r="2" fill="url(#goldGradient)" />
+            <path
+              d="M15 185 Q25 175 25 185 Q15 195 15 185 Z"
+              fill="url(#goldGradient)"
+            />
+          </g>
+
+          {/* Floral Decorations - Bottom Right */}
+          <g opacity="0.9">
+            <path
+              d="M295 195 Q275 195 265 175 M295 195 Q285 175 295 155 M295 195 Q255 198 235 190"
+              stroke="url(#goldGradient)"
+              strokeWidth="1.5"
+              fill="none"
+            />
+            <circle cx="265" cy="175" r="2.5" fill="url(#goldGradient)" />
+            <circle cx="295" cy="155" r="2" fill="url(#goldGradient)" />
+            <circle cx="235" cy="190" r="2" fill="url(#goldGradient)" />
+            <path
+              d="M285 185 Q275 175 275 185 Q285 195 285 185 Z"
+              fill="url(#goldGradient)"
+            />
+          </g>
         </svg>
 
         {/* Layer 4: Top Flap (Animated) */}
@@ -610,25 +677,80 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
+          <defs>
+            <linearGradient
+              id="flapGradient"
+              x1="150"
+              y1="0"
+              x2="150"
+              y2="115"
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop stopColor="#5B21B6" />
+              <stop offset="1" stopColor="#4C1D95" />
+            </linearGradient>
+            <linearGradient id="goldGradient2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#FCD34D" />
+              <stop offset="0.5" stopColor="#D97706" />
+              <stop offset="1" stopColor="#FCD34D" />
+            </linearGradient>
+          </defs>
+
           <g id="envelope-flap">
             {/* Flap Triangle */}
-            <path d="M0 0 L150 110 L300 0 H0 Z" fill="#F9A8D4" />
-            {/* Highlight/Shadow */}
+            <path d="M0 0 L150 115 L300 0 H0 Z" fill="url(#flapGradient)" />
+
+            {/* Gold Border */}
             <path
-              d="M0 0 L150 110 L300 0"
-              stroke="#EC4899"
-              strokeWidth="1"
-              strokeOpacity="0.3"
+              d="M0 0 L150 115 L300 0"
+              stroke="url(#goldGradient2)"
+              strokeWidth="2"
+              fill="none"
             />
 
-            {/* Heart Seal */}
+            {/* Decorative Filigree */}
+            <path
+              d="M110 80 Q130 90 150 95 Q170 90 190 80"
+              stroke="url(#goldGradient2)"
+              strokeWidth="1"
+              fill="none"
+              opacity="0.6"
+            />
+
+            {/* Gold Wax Seal */}
             <g transform="translate(150, 85)">
               <g className={styles.heartSeal} onClick={handleTap}>
+                {/* Irregular Seal Shape */}
                 <path
-                  d="M0 10 C-10 -5 -25 5 -12 20 L0 32 L12 20 C25 5 10 -5 0 10 Z"
-                  fill="#BE185D"
-                  stroke="#9D174D"
-                  strokeWidth="2"
+                  d="M0 25 C12 25 22 15 25 5 C27 -8 18 -20 5 -25 C-8 -27 -22 -18 -25 -5 C-27 10 -18 25 0 25 Z"
+                  fill="url(#goldGradient2)"
+                  stroke="#B45309"
+                  strokeWidth="0.5"
+                />
+                <path
+                  d="M-20 0 Q-10 -15 0 -20 Q15 -10 20 5 Q10 20 0 20 Q-15 10 -20 0"
+                  fill="none"
+                  stroke="#FFF"
+                  strokeWidth="0.5"
+                  opacity="0.4"
+                />
+
+                {/* Inner Embossed Circle */}
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="16"
+                  stroke="#B45309"
+                  strokeWidth="1"
+                  strokeOpacity="0.3"
+                  fill="none"
+                />
+
+                {/* Heart Icon Embossed */}
+                <path
+                  d="M0 6 C-7 -3 -12 3 -7 9 L0 16 L7 9 C12 3 7 -3 0 6 Z"
+                  fill="#92400E"
+                  transform="translate(0, -8) scale(0.9)"
                 />
               </g>
             </g>

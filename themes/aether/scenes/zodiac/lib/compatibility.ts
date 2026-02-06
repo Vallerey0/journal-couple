@@ -12,7 +12,7 @@ const ELEMENT_COMPATIBILITY: Record<Element, Record<Element, number>> = {
 export function getCompatibility(
   maleSign: string,
   femaleSign: string,
-  dateString: string
+  dateString: string,
 ) {
   const maleData = zodiacData[maleSign];
   const femaleData = zodiacData[femaleSign];
@@ -32,15 +32,15 @@ export function getCompatibility(
     seed = (seed << 5) - seed + seedString.charCodeAt(i);
     seed |= 0;
   }
-  
+
   // Create a large fluctuation to ensure the range 65-100 is possible daily
   // We want the result to be heavily influenced by the day (alive feeling)
   const rand = Math.abs(seed);
-  
+
   // Daily Luck Factor (0 to 35)
   // This allows the score to swing significantly based on the day
-  const dailyLuck = rand % 36; 
-  
+  const dailyLuck = rand % 36;
+
   // Calculate Final Score:
   // We start with 65 (minimum requested) and add the daily luck (up to 35) -> max 100.
   // We also slightly weight it by the base elemental compatibility (to keep some zodiac truth).
@@ -49,13 +49,13 @@ export function getCompatibility(
   // - Minimum is around 65 (if dailyLuck is 0 and baseScore is low)
   // - Maximum is around 100 (if dailyLuck is 35 and baseScore is high)
   // - It feels very dynamic/random daily but still favors good matches slightly.
-  
-  let finalScore = 65 + (dailyLuck * 0.9) + ((baseScore - 65) * 0.1);
+
+  let finalScore = 65 + dailyLuck * 0.9 + (baseScore - 65) * 0.1;
 
   // Clamp strictly between 65 and 100
   if (finalScore > 100) finalScore = 100;
   if (finalScore < 65) finalScore = 65;
-  
+
   // Round to integer
   finalScore = Math.round(finalScore);
 
@@ -69,6 +69,6 @@ export function getCompatibility(
   return {
     percent: finalScore,
     status: status,
-    elementalSynergy: `${maleData.element} + ${femaleData.element}`
+    elementalSynergy: `${maleData.element} + ${femaleData.element}`,
   };
 }

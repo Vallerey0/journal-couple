@@ -1,0 +1,267 @@
+.sceneContainer {
+  position: relative;
+  width: 100%;
+  height: 100vh; /* Fallback */
+  height: 100dvh; /* Mobile browser friendly */
+  overflow: hidden;
+  background-color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective: 1200px; /* Cinematic depth */
+  touch-action: pan-y; /* Allow vertical scrolling, prevent horizontal browser nav */
+}
+
+@media (max-width: 768px) {
+  .sceneContainer {
+    perspective: 500px; /* Reduced depth for mobile */
+  }
+}
+
+.backgroundLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.bgImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0; /* Handled by GSAP */
+}
+
+.canvasLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Altar Platform */
+.altarContainer {
+  position: absolute;
+  bottom: -200px; /* Start below */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 150px;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.stoneAltar {
+  width: 100%;
+  height: 60px;
+  background: linear-gradient(to bottom, #444, #111);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+  position: relative;
+}
+
+/* Spotlight Glow */
+.spotlightGlow {
+  position: absolute;
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255,255,200,0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(20px);
+  z-index: 21;
+  opacity: 0;
+}
+
+/* 3D Ring */
+.orbitRing {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  z-index: 30;
+}
+
+/* Card Container */
+.cardContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+  height: 300px;
+  margin-top: -150px;
+  margin-left: -100px;
+  transform-style: preserve-3d;
+  cursor: pointer;
+  /* transform will be set by JS */
+}
+
+.cardInner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: box-shadow 0.3s ease;
+}
+
+.cardContainer:hover .cardInner {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.cardFace {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Front Face */
+.cardFront {
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.galleryImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.galleryPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #333;
+  color: #666;
+  font-family: sans-serif;
+  font-size: 0.8rem;
+}
+
+/* Back Face */
+.cardBack {
+  background: rgba(20, 20, 30, 0.95);
+  transform: rotateY(180deg);
+  padding: 0; /* Removed padding to allow full-width image */
+  display: flex;
+  flex-direction: column;
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.cardBackImageContainer {
+  width: 100%;
+  height: 140px; /* Top half */
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: zoom-in;
+  position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.cardBackImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.cardBackImageContainer:hover .cardBackImage {
+  transform: scale(1.1);
+}
+
+.cardBackContent {
+  width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  padding: 1rem; /* Padding moved here */
+}
+
+.cardBackContent::-webkit-scrollbar {
+  width: 4px;
+}
+.cardBackContent::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+}
+
+.cardTitle {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: #fbbf24; /* Amber-400 */
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 0.5rem;
+}
+
+.cardDate {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+  font-family: monospace;
+}
+
+.cardDesc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #e5e7eb;
+}
+
+/* Close Hint */
+.closeHint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.visible {
+  opacity: 1;
+}
+
+/* Overlay for detached card */
+.activeCardOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  transform-style: preserve-3d;
+  /* Size and position set by JS */
+  pointer-events: auto; /* Allow interaction with the open card */
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .cardContainer {
+    width: 100px;
+    height: 150px;
+    margin-top: -75px; /* Half height */
+    margin-left: -50px; /* Half width */
+  }
+}

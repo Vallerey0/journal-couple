@@ -8,26 +8,11 @@ import styles from "./styles.module.css";
 import { CoupleHoroscope, ZodiacSceneProps } from "./types";
 import { ConstellationCanvas } from "./canvasConstellation";
 import { LightParticleSystem } from "./canvasLight";
-import { buildZodiacTimeline } from "./motion";
+import { buildZodiacTimeline, createInfiniteSpin } from "./motion";
 import galaxyBgSrc from "./assets/galaxy-bg.jpg";
 import zodiacIconsSrc from "./assets/zodiac-icons.svg";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
-
-const ZODIAC_SIGNS = [
-  "aries",
-  "taurus",
-  "gemini",
-  "cancer",
-  "leo",
-  "virgo",
-  "libra",
-  "scorpio",
-  "sagittarius",
-  "capricorn",
-  "aquarius",
-  "pisces",
-];
 
 export default function ZodiacScene({
   male_birthdate,
@@ -44,14 +29,19 @@ export default function ZodiacScene({
   const zodiacContainerRef = useRef<HTMLDivElement>(null);
   const zodiacRingRef = useRef<HTMLDivElement>(null);
   const unifiedCardRef = useRef<HTMLDivElement>(null);
+  const cardContentRef = useRef<HTMLDivElement>(null);
   const compatibilityRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lightCanvasRef = useRef<HTMLCanvasElement>(null);
   const bgRef = useRef<HTMLImageElement>(null);
 
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const spinTweenRef = useRef<gsap.core.Tween | null>(null);
+  const scrollTriggerRef = useRef<ScrollTrigger | null>(null);
   const constellationRef = useRef<ConstellationCanvas | null>(null);
   const lightSystemRef = useRef<LightParticleSystem | null>(null);
+  const isAutoScrolling = useRef(false);
+  const isReturningFromGallery = useRef(false);
 
   // Helper to format date YYYY-MM-DD to DD-MM-YYYY
   const formatDate = (dateStr: string) => {
@@ -121,6 +111,7 @@ export default function ZodiacScene({
         !zodiacContainerRef.current ||
         !zodiacRingRef.current ||
         !unifiedCardRef.current ||
+        !cardContentRef.current ||
         !compatibilityRef.current
       )
         return;
@@ -132,6 +123,7 @@ export default function ZodiacScene({
           zodiacContainer: zodiacContainerRef.current,
           zodiacRing: zodiacRingRef.current,
           unifiedCard: unifiedCardRef.current,
+          cardContent: cardContentRef.current,
           compatibilitySection: compatibilityRef.current,
           canvas: canvasRef.current!,
           lightCanvas: lightCanvasRef.current!,
@@ -143,19 +135,29 @@ export default function ZodiacScene({
         data.female.sign,
       );
 
-      // ScrollTrigger to PLAY
-      ScrollTrigger.create({
+      // ScrollTrigger with PIN & SCRUB
+      const st = ScrollTrigger.create({
         trigger: containerRef.current,
-        start: "top center",
-        onEnter: () => {
-          timelineRef.current?.play();
+        start: "top top",
+        end: "+=4000", // Increased to allow content scrolling
+        pin: true,
+        scrub: 1,
+        animation: timelineRef.current!,
+        onLeave: () => {
+          // Start infinite spin when scroll finishes
+          if (zodiacRingRef.current) {
+            spinTweenRef.current = createInfiniteSpin(zodiacRingRef.current);
+          }
         },
-        onLeaveBack: () => {
-          timelineRef.current?.pause(0);
-          lightSystemRef.current?.reset();
-          document.body.style.overflow = "auto";
+        onEnterBack: () => {
+          // Kill spin when scrolling back into the scene
+          if (spinTweenRef.current) {
+            spinTweenRef.current.kill();
+            spinTweenRef.current = null;
+          }
         },
       });
+      scrollTriggerRef.current = st;
     }, containerRef);
 
     return () => {
@@ -164,6 +166,374 @@ export default function ZodiacScene({
       lightSystem.destroy();
       document.body.style.overflow = "auto";
       // ScrollTrigger is reverted by ctx.revert() automatically if created inside context
+    };
+  }, [loading, data]);
+
+  // Handle Return from Gallery with Animation
+  useEffect(() => {
+    const handleReturn = () => {
+      if (!timelineRef.current) return;
+      isReturningFromGallery.current = true;
+
+      // 1. Set Initial State (Zoomed Out / Exit State)
+      // This mimics where we left off when going to gallery
+      if (unifiedCardRef.current)
+        gsap.set(unifiedCardRef.current, { opacity: 0, scale: 0.8 });
+      if (zodiacRingRef.current)
+        gsap.set(zodiacRingRef.current, { scale: 8, rotation: 720 });
+      if (bgRef.current)
+        gsap.set(bgRef.current, { scale: 2, filter: "blur(20px)", opacity: 1 });
+
+      // JUMP: langsung pindah ke section zodiac
+      const zodiacSection = document.getElementById("zodiac");
+      if (zodiacSection) {
+        document.body.style.overflow = "hidden";
+        zodiacSection.scrollIntoView({ behavior: "auto", block: "start" });
+        requestAnimationFrame(() => ScrollTrigger.refresh());
+      }
+
+      // 2. Play "Reverse Exit" Animation (Enter from Gallery)
+      const tl = gsap.timeline({
+        onComplete: () => {
+          isReturningFromGallery.current = false;
+          isAutoScrolling.current = false;
+          // Ensure we are interactive
+          document.body.style.overflow = "auto";
+
+          // HARD RESET to ensure card is 100% ready and visible
+          // Sometimes animation might end slightly off due to easing
+          if (unifiedCardRef.current)
+            gsap.set(unifiedCardRef.current, {
+              opacity: 1,
+              scale: 1,
+              clearProps: "transform",
+            });
+          if (zodiacRingRef.current)
+            gsap.set(zodiacRingRef.current, {
+              scale: 1,
+              rotation: 0,
+              clearProps: "transform",
+            });
+          if (bgRef.current)
+            gsap.set(bgRef.current, {
+              scale: 1,
+              filter: "blur(0px)",
+              opacity: 1,
+              clearProps: "filter,transform",
+            });
+
+          // Force refresh ScrollTrigger to re-calculate pin/scroll positions
+          ScrollTrigger.refresh();
+        },
+      });
+
+      // Animate back to Normal State
+      tl.to(
+        bgRef.current,
+        {
+          scale: 1,
+          filter: "blur(0px)",
+          duration: 1.2,
+          ease: "power2.out",
+          overwrite: true,
+        },
+        0,
+      );
+
+      tl.to(
+        zodiacRingRef.current,
+        {
+          scale: 1,
+          rotation: 0,
+          duration: 1.2,
+          ease: "power4.out",
+          overwrite: true,
+        },
+        0,
+      );
+
+      tl.to(
+        unifiedCardRef.current,
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 1.0,
+          ease: "back.out(1.2)",
+          overwrite: true,
+        },
+        0.2,
+      );
+
+      // IMPORTANT: Force timeline to end state to prevent Scrub from resetting it
+      // Since we jumped to "top top", scrub would want to be at 0.
+      // But we want to show the full content.
+      // We rely on overwrite: true to keep our values.
+      // However, any scroll will trigger scrub update.
+      // We might need to jump scroll to end? Or just let user scroll down to replay?
+      // For now, visual override is enough.
+    };
+
+    window.addEventListener("return-from-gallery", handleReturn);
+
+    // Also keep the old reset handler for safety/other cases
+    const handleReset = () => {
+      if (!timelineRef.current) return;
+      // Quick reset if needed
+      if (unifiedCardRef.current)
+        gsap.set(unifiedCardRef.current, { opacity: 1, scale: 1 });
+      if (zodiacRingRef.current)
+        gsap.set(zodiacRingRef.current, { scale: 1, rotation: 0 });
+      if (bgRef.current)
+        gsap.set(bgRef.current, { scale: 1, filter: "blur(0px)", opacity: 1 });
+      isAutoScrolling.current = false;
+    };
+    window.addEventListener("reset-zodiac", handleReset);
+
+    return () => {
+      window.removeEventListener("return-from-gallery", handleReturn);
+      window.removeEventListener("reset-zodiac", handleReset);
+    };
+  }, []);
+
+  // Handle Scroll Interactions (Unified Card & Window) - Scroll from anywhere when zodiac in view
+  useEffect(() => {
+    if (loading || !data || !cardContentRef.current || !containerRef.current) return;
+
+    const cardContent = cardContentRef.current;
+    const container = containerRef.current;
+    let touchStartY = 0;
+
+    // Only handle when zodiac section is in viewport (prevents conflicts with gallery)
+    const isZodiacInView = () => {
+      const rect = container.getBoundingClientRect();
+      return rect.top < window.innerHeight * 0.5 && rect.bottom > window.innerHeight * 0.3;
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!isZodiacInView()) return;
+      if (isAutoScrolling.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (!timelineRef.current || timelineRef.current.time() < 3.5) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = cardContent;
+      const isScrollDown = e.deltaY > 0;
+      const isScrollUp = e.deltaY < 0;
+
+      // 1. SCROLL DOWN
+      if (isScrollDown) {
+        // If content can scroll down, prioritize content scroll
+        if (scrollTop + clientHeight < scrollHeight - 1) {
+          e.preventDefault(); // Stop window scroll (keep Pinned)
+          e.stopPropagation();
+          cardContent.scrollTop += e.deltaY;
+        } else {
+          // If content is at bottom, TRIGGER EXIT TO GALLERY
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (!isAutoScrolling.current) {
+            isAutoScrolling.current = true;
+            // Lock body scroll to prevent native scroll from bypassing the animation
+            document.body.style.overflow = "hidden";
+
+            // EXIT ANIMATION SEQUENCE
+            const tl = gsap.timeline({
+              onComplete: () => {
+                // HARD JUMP / INSTANT SCROLL
+                const gallerySection = document.getElementById("gallery");
+                if (gallerySection) {
+                  gallerySection.scrollIntoView({ behavior: "auto" });
+                  // Signal Gallery to start its animation sequence explicitly
+                  window.dispatchEvent(new CustomEvent("enter-gallery"));
+                }
+
+                // Unlock scroll after jump
+                // Small delay to ensure the browser has processed the jump
+                setTimeout(() => {
+                  document.body.style.overflow = "auto";
+                  isAutoScrolling.current = false;
+                }, 50);
+              },
+            });
+
+            // 1. Card Disappears
+            tl.to(
+              unifiedCardRef.current,
+              {
+                opacity: 0,
+                scale: 0.8,
+                duration: 0.8,
+                ease: "back.in(1.7)",
+                overwrite: true,
+              },
+              0,
+            );
+
+            // 2. Zodiac Icon Spins Fast & Zooms
+            tl.to(
+              zodiacRingRef.current,
+              {
+                rotation: "+=720", // Spin faster (2 full rotations)
+                scale: 8, // Zoom larger
+                duration: 1.5,
+                ease: "power4.in",
+                overwrite: true,
+              },
+              0.1, // Start slightly earlier
+            );
+
+            // 3. Background Zooms & Blurs
+            tl.to(
+              bgRef.current,
+              {
+                scale: 2,
+                filter: "blur(20px)", // Stronger blur
+                duration: 1.5,
+                ease: "power2.in",
+                overwrite: true,
+              },
+              0.1,
+            );
+          }
+        }
+      }
+
+      // 2. SCROLL UP
+      if (isScrollUp) {
+        // If content can scroll up, prioritize content scroll
+        if (scrollTop > 5) {
+          e.preventDefault(); // Stop window scroll (keep Pinned)
+          e.stopPropagation();
+          cardContent.scrollTop += e.deltaY;
+        }
+        // ELSE: Content is at top.
+        // Allow native scroll to handle Scrub Back logic.
+        // Do NOT preventDefault. Do NOT trigger custom animation.
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isZodiacInView()) return;
+      if (!timelineRef.current || timelineRef.current.time() < 3.5) return;
+      if (isAutoScrolling.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchStartY - touchY; // Positive = scroll down, Negative = scroll up
+      const { scrollTop, scrollHeight, clientHeight } = cardContent;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      const isAtTop = scrollTop <= 5;
+
+      // Touch: whole viewport = scroll area for card (scroll from outside card works)
+      if (deltaY > 0) {
+        if (!isAtBottom) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Scroll card content (works when touch is inside OR outside card)
+          cardContent.scrollTop += deltaY;
+          touchStartY = touchY;
+        } else {
+          // At bottom -> Trigger Exit
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (!isAutoScrolling.current) {
+            isAutoScrolling.current = true;
+
+            // Lock body scroll to prevent native scroll from bypassing the animation
+            document.body.style.overflow = "hidden";
+
+            // EXIT ANIMATION SEQUENCE (Copy of above)
+            const tl = gsap.timeline({
+              onComplete: () => {
+                const gallerySection = document.getElementById("gallery");
+                if (gallerySection) {
+                  gallerySection.scrollIntoView({ behavior: "auto" });
+                  // Signal Gallery to start its animation sequence explicitly
+                  window.dispatchEvent(new CustomEvent("enter-gallery"));
+                }
+
+                // Unlock scroll after jump
+                setTimeout(() => {
+                  document.body.style.overflow = "auto";
+                  isAutoScrolling.current = false;
+                }, 50);
+              },
+            });
+
+            tl.to(
+              unifiedCardRef.current,
+              {
+                opacity: 0,
+                scale: 0.8,
+                duration: 0.8,
+                ease: "back.in(1.7)",
+                overwrite: true,
+              },
+              0,
+            );
+            tl.to(
+              zodiacRingRef.current,
+              {
+                rotation: "+=720", // Spin faster
+                scale: 8, // Zoom larger
+                duration: 1.5,
+                ease: "power4.in",
+                overwrite: true,
+              },
+              0.1,
+            );
+            tl.to(
+              bgRef.current,
+              {
+                scale: 2,
+                filter: "blur(20px)",
+                duration: 1.5,
+                ease: "power2.in",
+                overwrite: true,
+              },
+              0.1,
+            );
+          }
+        }
+      }
+      else if (deltaY < 0) {
+        if (!isAtTop) {
+          e.preventDefault();
+          e.stopPropagation();
+          cardContent.scrollTop += deltaY;
+          touchStartY = touchY;
+        }
+      }
+    };
+
+    // Attach to window AND container for reliable capture (PC + mobile, inside/outside card)
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    // We also need to capture inside card to stop propagation explicitly
+    cardContent.addEventListener("wheel", handleWheel, { passive: false });
+
+    // Touch listeners - capture on container so scroll works from anywhere (inside/outside card)
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    container.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchmove", handleTouchMove, true);
     };
   }, [loading, data]);
 
@@ -202,10 +572,10 @@ export default function ZodiacScene({
       {/* Phase 4: Zodiac Cards (Unified) */}
       <div ref={zodiacContainerRef} className={styles.zodiacContainer}>
         <div ref={unifiedCardRef} className={styles.unifiedCard}>
-          <div className={styles.cardContent}>
+          <div ref={cardContentRef} className={styles.cardContent}>
             <div className={styles.coupleRow}>
-              {/* Male Side */}
               <div className={styles.personInfo}>
+                {/* Male Side */}
                 <div className={styles.personName}>{male_name}</div>
                 <div className={styles.personDate}>
                   {formatDate(male_birthdate)}
