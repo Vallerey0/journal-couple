@@ -356,7 +356,10 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       const container = containerRef.current;
       if (!container) return false;
       const rect = container.getBoundingClientRect();
-      return rect.top < window.innerHeight * 0.5 && rect.bottom > window.innerHeight * 0.3;
+      return (
+        rect.top < window.innerHeight * 0.5 &&
+        rect.bottom > window.innerHeight * 0.3
+      );
     };
 
     // Wheel Handler - scroll up triggers gallery reverse → on complete jump to zodiac + zodiac reverse

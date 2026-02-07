@@ -143,6 +143,10 @@ export default function ZodiacScene({
         pin: true,
         scrub: 1,
         animation: timelineRef.current!,
+        invalidateOnRefresh: true,
+        onUpdate: (self) => {
+          console.log("ScrollTrigger progress:", self.progress);
+        },
         onLeave: () => {
           // Start infinite spin when scroll finishes
           if (zodiacRingRef.current) {
@@ -158,6 +162,9 @@ export default function ZodiacScene({
         },
       });
       scrollTriggerRef.current = st;
+
+      // Remove temporary minHeight used to prevent clamping
+      document.body.style.minHeight = "";
     }, containerRef);
 
     return () => {
@@ -172,119 +179,105 @@ export default function ZodiacScene({
   // Handle Return from Gallery with Animation
   useEffect(() => {
     const handleReturn = () => {
-      if (!timelineRef.current) return;
+      if (!timelineRef.current || !scrollTriggerRef.current) return;
       isReturningFromGallery.current = true;
 
-      // 1. Set Initial State (Zoomed Out / Exit State)
-      // This mimics where we left off when going to gallery
-      if (unifiedCardRef.current)
-        gsap.set(unifiedCardRef.current, { opacity: 0, scale: 0.8 });
-      if (zodiacRingRef.current)
-        gsap.set(zodiacRingRef.current, { scale: 8, rotation: 720 });
-      if (bgRef.current)
-        gsap.set(bgRef.current, { scale: 2, filter: "blur(20px)", opacity: 1 });
+      // 1. Force Scroll Position to END (Timeline Progress 1)
+      // This ensures that the ScrollTrigger controls the elements and they are at their "end" state.
+      const st = scrollTriggerRef.current;
+      st.scroll(st.end);
+      timelineRef.current.progress(1);
 
-      // JUMP: langsung pindah ke section zodiac
-      const zodiacSection = document.getElementById("zodiac");
-      if (zodiacSection) {
-        document.body.style.overflow = "hidden";
-        zodiacSection.scrollIntoView({ behavior: "auto", block: "start" });
-        requestAnimationFrame(() => ScrollTrigger.refresh());
-      }
+      // Lock scroll during transition
+      document.body.style.overflow = "hidden";
 
-      // 2. Play "Reverse Exit" Animation (Enter from Gallery)
+      // 2. Play "Reverse Exit" Animation
+      // We animate FROM the "Exit" state (what the user saw before returning)
+      // TO the current state (which is the Timeline End state).
+      // Since we just set progress(1), the elements are currently at the "End" state.
+      // We use .fromTo() to animate them.
+
       const tl = gsap.timeline({
         onComplete: () => {
           isReturningFromGallery.current = false;
           isAutoScrolling.current = false;
-          // Ensure we are interactive
           document.body.style.overflow = "auto";
-
-          // HARD RESET to ensure card is 100% ready and visible
-          // Sometimes animation might end slightly off due to easing
-          if (unifiedCardRef.current)
-            gsap.set(unifiedCardRef.current, {
-              opacity: 1,
-              scale: 1,
-              clearProps: "transform",
-            });
-          if (zodiacRingRef.current)
-            gsap.set(zodiacRingRef.current, {
-              scale: 1,
-              rotation: 0,
-              clearProps: "transform",
-            });
-          if (bgRef.current)
-            gsap.set(bgRef.current, {
-              scale: 1,
-              filter: "blur(0px)",
-              opacity: 1,
-              clearProps: "filter,transform",
-            });
-
-          // Force refresh ScrollTrigger to re-calculate pin/scroll positions
-          ScrollTrigger.refresh();
+          // Ensure ScrollTrigger is synced
+          st.refresh();
         },
       });
 
-      // Animate back to Normal State
-      tl.to(
-        bgRef.current,
-        {
-          scale: 1,
-          filter: "blur(0px)",
-          duration: 1.2,
-          ease: "power2.out",
-          overwrite: true,
-        },
-        0,
-      );
+      // Background: From blurred/scaled to Normal
+      if (bgRef.current) {
+        tl.fromTo(
+          bgRef.current,
+          { scale: 2, filter: "blur(20px)", opacity: 1 },
+          {
+            scale: 1,
+            filter: "blur(0px)",
+            opacity: 1,
+            duration: 1.2,
+            ease: "power2.out",
+          },
+          0,
+        );
+      }
 
-      tl.to(
-        zodiacRingRef.current,
-        {
-          scale: 1,
-          rotation: 0,
-          duration: 1.2,
-          ease: "power4.out",
-          overwrite: true,
-        },
-        0,
-      );
+      // Ring: From large/spun to Normal (90deg)
+      if (zodiacRingRef.current) {
+        // Timeline ends at rotation: 90.
+        // Exit added 720 -> 810.
+        tl.fromTo(
+          zodiacRingRef.current,
+          { scale: 8, rotation: 810 },
+          {
+            scale: 1,
+            rotation: 90,
+            duration: 1.2,
+            ease: "power4.out",
+          },
+          0,
+        );
+      }
 
-      tl.to(
-        unifiedCardRef.current,
-        {
-          opacity: 1,
-          scale: 1,
-          duration: 1.0,
-          ease: "back.out(1.2)",
-          overwrite: true,
-        },
-        0.2,
-      );
+      // Card: From hidden to Visible
+      if (unifiedCardRef.current) {
+        tl.fromTo(
+          unifiedCardRef.current,
+          { opacity: 0, scale: 0.8 },
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 1.0,
+            ease: "back.out(1.2)",
+          },
+          0.2,
+        );
+      }
 
-      // IMPORTANT: Force timeline to end state to prevent Scrub from resetting it
-      // Since we jumped to "top top", scrub would want to be at 0.
-      // But we want to show the full content.
-      // We rely on overwrite: true to keep our values.
-      // However, any scroll will trigger scrub update.
-      // We might need to jump scroll to end? Or just let user scroll down to replay?
-      // For now, visual override is enough.
+      // Compatibility: From hidden
+      if (compatibilityRef.current) {
+        tl.fromTo(
+          compatibilityRef.current,
+          { opacity: 0, y: 10 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 1.0,
+          },
+          0.2,
+        );
+      }
     };
 
     window.addEventListener("return-from-gallery", handleReturn);
 
     // Also keep the old reset handler for safety/other cases
     const handleReset = () => {
-      if (!timelineRef.current) return;
-      // Quick reset if needed
-      if (unifiedCardRef.current)
-        gsap.set(unifiedCardRef.current, { opacity: 1, scale: 1 });
-      if (zodiacRingRef.current)
-        gsap.set(zodiacRingRef.current, { scale: 1, rotation: 0 });
-      if (bgRef.current)
-        gsap.set(bgRef.current, { scale: 1, filter: "blur(0px)", opacity: 1 });
+      if (!timelineRef.current || !scrollTriggerRef.current) return;
+      // Force state to end (visible content)
+      scrollTriggerRef.current.scroll(scrollTriggerRef.current.end);
+      timelineRef.current.progress(1);
       isAutoScrolling.current = false;
     };
     window.addEventListener("reset-zodiac", handleReset);
@@ -297,7 +290,8 @@ export default function ZodiacScene({
 
   // Handle Scroll Interactions (Unified Card & Window) - Scroll from anywhere when zodiac in view
   useEffect(() => {
-    if (loading || !data || !cardContentRef.current || !containerRef.current) return;
+    if (loading || !data || !cardContentRef.current || !containerRef.current)
+      return;
 
     const cardContent = cardContentRef.current;
     const container = containerRef.current;
@@ -306,7 +300,10 @@ export default function ZodiacScene({
     // Only handle when zodiac section is in viewport (prevents conflicts with gallery)
     const isZodiacInView = () => {
       const rect = container.getBoundingClientRect();
-      return rect.top < window.innerHeight * 0.5 && rect.bottom > window.innerHeight * 0.3;
+      return (
+        rect.top < window.innerHeight * 0.5 &&
+        rect.bottom > window.innerHeight * 0.3
+      );
     };
 
     const handleWheel = (e: WheelEvent) => {
@@ -367,7 +364,6 @@ export default function ZodiacScene({
                 scale: 0.8,
                 duration: 0.8,
                 ease: "back.in(1.7)",
-                overwrite: true,
               },
               0,
             );
@@ -380,7 +376,6 @@ export default function ZodiacScene({
                 scale: 8, // Zoom larger
                 duration: 1.5,
                 ease: "power4.in",
-                overwrite: true,
               },
               0.1, // Start slightly earlier
             );
@@ -393,7 +388,6 @@ export default function ZodiacScene({
                 filter: "blur(20px)", // Stronger blur
                 duration: 1.5,
                 ease: "power2.in",
-                overwrite: true,
               },
               0.1,
             );
@@ -408,10 +402,36 @@ export default function ZodiacScene({
           e.preventDefault(); // Stop window scroll (keep Pinned)
           e.stopPropagation();
           cardContent.scrollTop += e.deltaY;
+        } else {
+          // ELSE: Content is at top. TRIGGER AUTO REVERSE TO INTRO
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (!isAutoScrolling.current && scrollTriggerRef.current) {
+            isAutoScrolling.current = true;
+            // document.body.style.overflow = "hidden"; // Don't hide overflow, it breaks scrollTo
+
+            // 1. Scroll to Start of Zodiac (Reverses Animation)
+            gsap.to(window, {
+              scrollTo: scrollTriggerRef.current.start,
+              duration: 2.0,
+              ease: "power2.inOut",
+              onComplete: () => {
+                // 2. Once reversed, scroll to Intro
+                const introSection = document.getElementById("intro");
+                if (introSection) {
+                  introSection.scrollIntoView({ behavior: "smooth" });
+                }
+
+                // Unlock scroll after jump
+                setTimeout(() => {
+                  document.body.style.overflow = "auto";
+                  isAutoScrolling.current = false;
+                }, 1000);
+              },
+            });
+          }
         }
-        // ELSE: Content is at top.
-        // Allow native scroll to handle Scrub Back logic.
-        // Do NOT preventDefault. Do NOT trigger custom animation.
       }
     };
 
@@ -478,7 +498,6 @@ export default function ZodiacScene({
                 scale: 0.8,
                 duration: 0.8,
                 ease: "back.in(1.7)",
-                overwrite: true,
               },
               0,
             );
@@ -489,7 +508,6 @@ export default function ZodiacScene({
                 scale: 8, // Zoom larger
                 duration: 1.5,
                 ease: "power4.in",
-                overwrite: true,
               },
               0.1,
             );
@@ -500,19 +518,42 @@ export default function ZodiacScene({
                 filter: "blur(20px)",
                 duration: 1.5,
                 ease: "power2.in",
-                overwrite: true,
               },
               0.1,
             );
           }
         }
-      }
-      else if (deltaY < 0) {
+      } else if (deltaY < 0) {
         if (!isAtTop) {
           e.preventDefault();
           e.stopPropagation();
           cardContent.scrollTop += deltaY;
           touchStartY = touchY;
+        } else {
+          // Auto Reverse Logic (same as wheel)
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (!isAutoScrolling.current && scrollTriggerRef.current) {
+            isAutoScrolling.current = true;
+            // document.body.style.overflow = "hidden"; // Don't hide overflow, it breaks scrollTo
+
+            gsap.to(window, {
+              scrollTo: scrollTriggerRef.current.start,
+              duration: 2.0,
+              ease: "power2.inOut",
+              onComplete: () => {
+                const introSection = document.getElementById("intro");
+                if (introSection) {
+                  introSection.scrollIntoView({ behavior: "smooth" });
+                }
+                setTimeout(() => {
+                  document.body.style.overflow = "auto";
+                  isAutoScrolling.current = false;
+                }, 1000);
+              },
+            });
+          }
         }
       }
     };
@@ -526,7 +567,10 @@ export default function ZodiacScene({
     // Touch listeners - capture on container so scroll works from anywhere (inside/outside card)
     window.addEventListener("touchstart", handleTouchStart);
     window.addEventListener("touchmove", handleTouchMove, { passive: false });
-    container.addEventListener("touchmove", handleTouchMove, { passive: false, capture: true });
+    container.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+      capture: true,
+    });
 
     return () => {
       window.removeEventListener("wheel", handleWheel);
