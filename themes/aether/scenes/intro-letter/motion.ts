@@ -12,7 +12,11 @@ interface Refs {
   canvas: HTMLCanvasElement;
 }
 
-export const buildTimeline = (refs: Refs, onComplete: () => void) => {
+export const buildTimeline = (
+  refs: Refs,
+  onComplete: () => void,
+  onReady?: () => void,
+) => {
   const tl = gsap.timeline({
     paused: true,
     onComplete,
@@ -51,6 +55,11 @@ export const buildTimeline = (refs: Refs, onComplete: () => void) => {
 
   // 3. Ready State Label
   tl.addLabel("ready");
+
+  // Trigger idle animations if provided
+  if (onReady) {
+    tl.call(onReady);
+  }
 
   // 4. PAUSE for User Interaction
   tl.addPause();

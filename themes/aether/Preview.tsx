@@ -4,6 +4,7 @@
 import IntroLetter from "./scenes/intro-letter";
 import ZodiacScene from "./scenes/zodiac";
 import GalleryScene from "./scenes/gallery";
+import StoryScene from "./scenes/story";
 import { getPublicMediaUrl } from "@/lib/media/url";
 
 // Using the actual schema from the project but mapping it to the PreviewProps
@@ -63,6 +64,11 @@ export default function Preview({ data }: PreviewProps) {
       {/* Scene 3: Gallery */}
       <section id="gallery">
         <GalleryScene gallery={galleryItems} />
+      </section>
+
+      {/* Scene 4: Story */}
+      <section id="story">
+        <StoryScene stories={data.stories || []} />
       </section>
     </main>
   );

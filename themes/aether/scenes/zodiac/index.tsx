@@ -143,6 +143,7 @@ export default function ZodiacScene({
         pin: true,
         scrub: 1,
         animation: timelineRef.current!,
+        refreshPriority: 5,
         invalidateOnRefresh: true,
         onUpdate: (self) => {
           console.log("ScrollTrigger progress:", self.progress);
@@ -617,6 +618,28 @@ export default function ZodiacScene({
       <div ref={zodiacContainerRef} className={styles.zodiacContainer}>
         <div ref={unifiedCardRef} className={styles.unifiedCard}>
           <div ref={cardContentRef} className={styles.cardContent}>
+            {/* Phase 6: Compatibility (Now at Top) */}
+            <div ref={compatibilityRef} className={styles.compatibilitySection}>
+              <div className={styles.compatibilityLabel}>
+                Kecocokan Hubungan ({data.date})
+              </div>
+              <div className={styles.progressContainer}>
+                <div
+                  className={styles.progressBar}
+                  style={{ width: `${data.compatibility_percent}%` }}
+                />
+              </div>
+              <div className={styles.percentageText}>
+                {data.compatibility_percent}%
+              </div>
+              <div
+                className={styles.summaryText}
+                style={{ whiteSpace: "pre-line", textAlign: "justify" }}
+              >
+                {data.summary}
+              </div>
+            </div>
+
             <div className={styles.coupleRow}>
               <div className={styles.personInfo}>
                 {/* Male Side */}
@@ -636,28 +659,6 @@ export default function ZodiacScene({
                 </div>
                 <h3 className={styles.signName}>{data.female.sign}</h3>
                 <p className={styles.horoscopeText}>{data.female.horoscope}</p>
-              </div>
-            </div>
-
-            {/* Phase 6: Compatibility */}
-            <div ref={compatibilityRef} className={styles.compatibilitySection}>
-              <div className={styles.compatibilityLabel}>
-                Kecocokan Hubungan ({data.date})
-              </div>
-              <div className={styles.progressContainer}>
-                <div
-                  className={styles.progressBar}
-                  style={{ width: `${data.compatibility_percent}%` }}
-                />
-              </div>
-              <div className={styles.percentageText}>
-                {data.compatibility_percent}%
-              </div>
-              <div
-                className={styles.summaryText}
-                style={{ whiteSpace: "pre-line", textAlign: "justify" }}
-              >
-                {data.summary}
               </div>
             </div>
           </div>

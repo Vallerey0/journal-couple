@@ -61,6 +61,9 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
   const lightOrbRef = useRef<HTMLDivElement>(null);
 
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const floatingTweenRef = useRef<gsap.core.Tween | null>(null);
+  const breathingTweenRef = useRef<gsap.core.Tween | null>(null);
+  const isFloatingRef = useRef(true);
   const autoScrollTriggered = useRef(false);
 
   // Handle Client-Side Mounting (Hydration Fix)
@@ -76,9 +79,20 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
     // Init Star Background
     let starBg: StarBackground | null = null;
+    let animationFrameId: number;
     if (starCanvasRef.current) {
       starBg = new StarBackground(starCanvasRef.current);
     }
+
+    // Canvas Resize Handler
+    const updateCanvasSize = () => {
+      if (canvasRef.current) {
+        canvasRef.current.width = window.innerWidth;
+        canvasRef.current.height = window.innerHeight;
+      }
+    };
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
 
     // GSAP Context for cleanup
     const ctx = gsap.context(() => {
@@ -94,6 +108,162 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
       )
         return;
 
+      // --- 0. FLOATING ANIMATION (Idle State) ---
+      // Random movement to simulate floating in space
+      // We use a separate tween so we can kill it easily on interaction
+      isFloatingRef.current = true;
+
+      const startIdleAnimations = () => {
+        if (
+          !envelopeWrapperRef.current ||
+          !envelopeBackRef.current ||
+          !envelopeFrontRef.current ||
+          !envelopeFlapRef.current
+        )
+          return;
+
+        // Target only the envelope parts, EXCLUDING the paper
+        // To keep them synchronized (move as one unit), we animate a proxy object
+        // and apply the values to all parts in onUpdate.
+        const envelopeParts = [
+          envelopeBackRef.current,
+          envelopeFrontRef.current,
+          envelopeFlapRef.current,
+        ];
+
+        // Fix: Set common transform origin (Top Center) for all parts to prevent detachment
+        // The flap pivots from the top, so other parts must match to rotate in sync.
+        gsap.set(envelopeParts, { transformOrigin: "50% 0%" });
+
+        const proxy = { x: 0, y: 0, rotation: 0, scale: 1 };
+
+        // X/Y/Rotation Floating - More aggressive
+        floatingTweenRef.current = gsap.to(proxy, {
+          x: "random(-20, 20)",
+          y: "random(-20, 20)",
+          rotation: "random(-4, 4)",
+          duration: 2.5,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+          repeatRefresh: true,
+          onUpdate: () => {
+            gsap.set(envelopeParts, {
+              x: proxy.x,
+              y: proxy.y,
+              rotation: proxy.rotation,
+            });
+          },
+        });
+
+        // Scale Breathing - Faster
+        breathingTweenRef.current = gsap.to(proxy, {
+          scale: 1.05,
+          duration: 3,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+          onUpdate: () => {
+            gsap.set(envelopeParts, {
+              scale: proxy.scale,
+            });
+          },
+        });
+      };
+
+      // --- STAR TRAIL EFFECT (OPTIMIZED) ---
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d", { alpha: true }); // Enable alpha for better performance if needed
+
+      interface StarParticle {
+        x: number;
+        y: number;
+        size: number;
+        opacity: number;
+        speedX: number;
+        speedY: number;
+        life: number;
+      }
+
+      const stars: StarParticle[] = [];
+      const maxStars = 20; // Reduced from 50 to 20 for performance
+
+      const createStar = (x: number, y: number): StarParticle => ({
+        x,
+        y,
+        size: Math.random() * 2 + 1, // Slightly smaller stars
+        opacity: 0.8, // Start slightly transparent
+        speedX: (Math.random() - 0.5) * 0.5,
+        speedY: (Math.random() - 0.5) * 0.5,
+        life: 1.0,
+      });
+
+      const drawStar = (ctx: CanvasRenderingContext2D, star: StarParticle) => {
+        // Simplified drawing - reduced shadowBlur which is expensive
+        ctx.save();
+        ctx.translate(star.x, star.y);
+        ctx.globalAlpha = star.opacity;
+        ctx.fillStyle = "#FCD34D";
+        // ctx.shadowBlur = 2; // Reduced shadow blur or remove entirely
+        // ctx.shadowColor = "#FCD34D";
+
+        // Draw simple circle instead of complex path for better performance
+        ctx.beginPath();
+        ctx.arc(0, 0, star.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      };
+
+      const renderTrail = () => {
+        if (!context || !isFloatingRef.current) return;
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Spawn new stars at envelope position - Reduced spawn rate
+        if (envelopeWrapperRef.current) {
+          const rect = envelopeWrapperRef.current.getBoundingClientRect();
+          // Center of envelope
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          // Randomly spawn - Lower probability
+          if (Math.random() > 0.9) {
+            stars.push(createStar(centerX, centerY));
+          }
+        }
+
+        // Update and draw stars
+        for (let i = stars.length - 1; i >= 0; i--) {
+          const star = stars[i];
+          star.x += star.speedX;
+          star.y += star.speedY;
+          star.opacity -= 0.02; // Fade out faster
+          star.life -= 0.02;
+          star.size *= 0.95; // Shrink faster
+
+          if (star.opacity <= 0 || star.life <= 0) {
+            stars.splice(i, 1);
+          } else {
+            drawStar(context, star);
+          }
+        }
+
+        // Limit max stars
+        if (stars.length > maxStars) {
+          stars.splice(0, stars.length - maxStars);
+        }
+
+        if (isFloatingRef.current) {
+          animationFrameId = requestAnimationFrame(renderTrail);
+        } else {
+          context.clearRect(0, 0, canvas.width, canvas.height); // Clear when done
+        }
+      };
+
+      // Start loop
+      renderTrail();
+
       timelineRef.current = buildTimeline(
         {
           sceneContainer: containerRef.current,
@@ -106,10 +276,6 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
           canvas: canvasRef.current,
         },
         () => {
-          // On Complete
-          setIsCompleted(true);
-          document.body.style.overflow = ""; // Unlock scroll
-
           // Trigger handwriting reveal animation for text content
           const textElements =
             paperContentRef.current?.querySelectorAll("h1, p");
@@ -126,89 +292,107 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
               duration: 1, // Faster writing
               stagger: 0.2, // Faster sequence
               ease: "power1.inOut",
+              onComplete: () => {
+                setIsCompleted(true);
+                document.body.style.overflow = ""; // Unlock scroll only after writing
+              },
             });
+          } else {
+            // Fallback if no text elements
+            setIsCompleted(true);
+            document.body.style.overflow = "";
           }
         },
+        startIdleAnimations, // On Ready (Start floating)
       );
 
       // Start the timeline
       timelineRef.current.play();
-
-      // --- EXIT ANIMATION (Crumple -> Light Orb -> Fall) ---
-      if (
-        envelopeWrapperRef.current &&
-        lightOrbRef.current &&
-        starCanvasRef.current
-      ) {
-        const exitTl = gsap.timeline({
-          scrollTrigger: {
-            trigger: containerRef.current,
-            start: "top top",
-            end: "+=2000",
-            pin: true,
-            scrub: 1,
-            anticipatePin: 1,
-          },
-        });
-
-        // 1. Crumple Paper & Reveal Light
-        exitTl
-          .fromTo(
-            envelopeWrapperRef.current,
-            {
-              scale: 1,
-              rotation: 0,
-              opacity: 1,
-            },
-            {
-              scale: 0,
-              rotation: 360,
-              opacity: 0,
-              duration: 1,
-              ease: "expo.in",
-            },
-            0,
-          )
-          .to(
-            lightOrbRef.current,
-            {
-              scale: 1,
-              opacity: 1,
-              duration: 0.5,
-              ease: "power2.out",
-            },
-            0.5,
-          )
-          // 2. Warp Speed / Falling Effect (Blur stars vertically)
-          .to(
-            starCanvasRef.current,
-            {
-              scaleY: 20,
-              opacity: 0.5,
-              duration: 1,
-              ease: "power1.in",
-            },
-            0,
-          )
-          // 3. Light Orb Falls Down
-          .to(
-            lightOrbRef.current,
-            {
-              y: window.innerHeight,
-              duration: 1,
-              ease: "power1.in",
-            },
-            0.5,
-          );
-      }
     }, containerRef);
 
     return () => {
+      isFloatingRef.current = false; // Stop loop
+      if (animationFrameId) cancelAnimationFrame(animationFrameId); // Explicitly cancel
+      window.removeEventListener("resize", updateCanvasSize);
       ctx.revert();
       if (starBg) starBg.destroy();
       document.body.style.overflow = "";
     };
   }, [isMounted]);
+
+  // Handle Exit Animation (ScrollTrigger) - Only activate when letter is fully open
+  useEffect(() => {
+    if (
+      !isCompleted ||
+      !containerRef.current ||
+      !envelopeWrapperRef.current ||
+      !paperRef.current ||
+      !lightOrbRef.current ||
+      !starCanvasRef.current
+    )
+      return;
+
+    const ctx = gsap.context(() => {
+      // --- EXIT ANIMATION (Crumple -> Light Orb -> Fall) ---
+      const exitTl = gsap.timeline({
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top top",
+          end: "+=2000",
+          pin: true,
+          scrub: 1,
+          anticipatePin: 1,
+          refreshPriority: 10, // Ensure this calculates before downstream pins
+        },
+      });
+
+      // 1. Shrink Paper & Reveal Light
+      exitTl
+        .to(
+          paperRef.current,
+          {
+            scale: 0,
+            opacity: 0,
+            duration: 1,
+            ease: "power1.inOut",
+          },
+          0,
+        )
+        .to(
+          lightOrbRef.current,
+          {
+            scale: 1,
+            opacity: 1,
+            duration: 0.5,
+            ease: "power2.out",
+          },
+          0.5,
+        )
+        // 2. Warp Speed / Falling Effect (Blur stars vertically)
+        .to(
+          starCanvasRef.current,
+          {
+            scaleY: 20,
+            opacity: 0.5,
+            duration: 1,
+            ease: "power1.in",
+          },
+          0,
+        )
+        // 3. Light Orb Falls Down
+        .to(
+          lightOrbRef.current,
+          {
+            y: window.innerHeight,
+            duration: 1,
+            ease: "power1.in",
+          },
+          0.5,
+        );
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, [isCompleted]);
 
   // Handle Scroll Interactions (Paper & Window)
   useEffect(() => {
@@ -219,8 +403,8 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
     // --- 1. PAPER SCROLL HANDLER (Inside the letter) ---
     const handlePaperWheel = (e: WheelEvent) => {
-      // Block interaction if auto-scroll is running
-      if (autoScrollTriggered.current) {
+      // Block interaction if auto-scroll is running or writing not completed
+      if (autoScrollTriggered.current || !isCompleted) {
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -251,10 +435,15 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         return;
       }
 
-      // If scrolling UP (deltaY < 0) inside the transition zone (and letter is open)
-      // We want to handle "Reverse Auto-Scroll" back to top of intro
       const scrollY = window.scrollY;
       const transitionZoneEnd = 2500;
+
+      // GUARD: If we are past the intro section (plus some buffer), ignore this listener
+      // This prevents the intro's auto-scroll logic from hijacking scroll in subsequent scenes (like Story)
+      if (scrollY > transitionZoneEnd + 500) return;
+
+      // If scrolling UP (deltaY < 0) inside the transition zone (and letter is open)
+      // We want to handle "Reverse Auto-Scroll" back to top of intro
 
       if (e.deltaY < 0 && !autoScrollTriggered.current) {
         // 1. If letter is open (isCompleted), try to scroll paper UP first
@@ -294,9 +483,10 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         if (isPaperScroll) {
           const maxScroll =
             paperContent.scrollHeight - paperContent.clientHeight;
-          const isNearBottom = paperContent.scrollTop >= maxScroll - 50;
-          const willHitBottom = paperContent.scrollTop + e.deltaY >= maxScroll;
-          if (isNearBottom || willHitBottom) {
+          // Only trigger if we are strictly AT the bottom (tolerance for fractional pixels)
+          const isAtBottom = paperContent.scrollTop >= maxScroll - 2;
+
+          if (isAtBottom && e.deltaY > 0) {
             shouldTrigger = true;
           }
         } else {
@@ -304,7 +494,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
           if (isCompleted) {
             const maxScroll =
               paperContent.scrollHeight - paperContent.clientHeight;
-            const isAtBottom = paperContent.scrollTop >= maxScroll - 10;
+            const isAtBottom = paperContent.scrollTop >= maxScroll - 2;
 
             if (!isAtBottom) {
               e.preventDefault();
@@ -343,8 +533,11 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      // Block interaction if auto-scroll is running
-      if (autoScrollTriggered.current) {
+      // GUARD: If we are past the intro section, ignore this listener
+      if (window.scrollY > 3000) return;
+
+      // Block interaction if auto-scroll is running or writing not completed
+      if (autoScrollTriggered.current || !isCompleted) {
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -370,9 +563,9 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
         // 2. PULL UP: Auto-scroll Forward
         const maxScroll = paperContent.scrollHeight - paperContent.clientHeight;
-        const isNearBottom = paperContent.scrollTop >= maxScroll - 50;
+        const isAtBottom = paperContent.scrollTop >= maxScroll - 2;
 
-        if (deltaY > 50 && isNearBottom && !autoScrollTriggered.current) {
+        if (deltaY > 50 && isAtBottom && !autoScrollTriggered.current) {
           autoScrollTriggered.current = true;
           const totalScrollDistance = 2000 + 2000 + window.innerHeight;
 
@@ -450,6 +643,26 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
   }, [isMounted, isCompleted]);
 
   const handleTap = () => {
+    // Stop floating animation on interaction
+    if (isFloatingRef.current) {
+      isFloatingRef.current = false;
+      floatingTweenRef.current?.kill();
+      breathingTweenRef.current?.kill();
+
+      // Reset to center smoothly
+      if (envelopeWrapperRef.current) {
+        gsap.to(envelopeWrapperRef.current, {
+          x: 0,
+          y: 0,
+          rotation: 0,
+          scale: 1,
+          duration: 0.5,
+          ease: "power2.out",
+          overwrite: true,
+        });
+      }
+    }
+
     if (timelineRef.current && timelineRef.current.paused()) {
       timelineRef.current.play();
     }
@@ -482,7 +695,11 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
       </div>
 
       {/* 3D Envelope Wrapper */}
-      <div ref={envelopeWrapperRef} className={styles.envelopeWrapper}>
+      <div
+        ref={envelopeWrapperRef}
+        className={styles.envelopeWrapper}
+        style={{ willChange: "transform" }}
+      >
         {/* Layer 1: Back */}
         <div ref={envelopeBackRef} className={styles.envelopeBack} />
 

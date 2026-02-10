@@ -10,6 +10,7 @@ export const buildGalleryTimeline = (
   spotlight: HTMLElement,
   cards: HTMLElement[],
   ring: HTMLElement,
+  onStart?: () => void,
   onComplete?: () => void,
   onReverse?: () => void,
 ) => {
@@ -26,6 +27,7 @@ export const buildGalleryTimeline = (
     },
     // No delay needed for "top top" as we arrive via jump.
     // Immediate start prevents "empty" time on reverse.
+    onStart: onStart,
     onComplete: onComplete,
     onReverseComplete: () => {
       // Execute callback first (which handles jump and unlock)

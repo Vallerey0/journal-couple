@@ -39,6 +39,8 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   const canReverseRef = useRef(false); // Grace period ref
   const isDraggingRef = useRef(false); // Ref for event listeners
   const isSceneStableRef = useRef(false); // Global safety lock on mount
+  const isAutoScrolling = useRef(false); // Prevent multiple triggers
+  const transitionImageRef = useRef<HTMLDivElement>(null); // Ref for exit transition image
   const touchStartY = useRef<number | null>(null);
   const touchStartX = useRef<number | null>(null);
   const isTouchingRef = useRef(false);
@@ -51,6 +53,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
     index: number;
   } | null>(null);
   const orbitTweenRef = useRef<gsap.core.Tween | null>(null);
+  const exitTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
 
   // Sync Refs
@@ -75,30 +78,6 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const dragStartX = useRef(0);
   const currentRotation = useRef(0);
-
-  // Helper for responsive card sizing
-  const getResponsiveSettings = () => {
-    const width = window.innerWidth;
-    const isMobile = width < 768;
-    const perspective = isMobile ? 800 : 1200;
-    const cardBaseWidth = 200; // From CSS
-
-    // Target width: Almost full screen on mobile, larger on desktop
-    const targetWidth = isMobile ? width * 0.95 : 600;
-
-    // We'll use a moderate Z to bring it forward, but rely on scale for size
-    const targetZ = isMobile ? 100 : 200;
-
-    // Calculate Perspective Scale Factor at targetZ
-    // scaleFactor = p / (p - z)
-    const perspectiveScale = perspective / (perspective - targetZ);
-
-    // We want: cardBaseWidth * perspectiveScale * finalScale = targetWidth
-    // finalScale = targetWidth / (cardBaseWidth * perspectiveScale)
-    const scale = targetWidth / (cardBaseWidth * perspectiveScale);
-
-    return { z: targetZ, scale };
-  };
 
   // Handle Resize & Dynamic Radius
   useEffect(() => {
@@ -152,6 +131,49 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
     window.addEventListener("enter-gallery", handleEnterGallery);
     return () =>
       window.removeEventListener("enter-gallery", handleEnterGallery);
+  }, []);
+
+  // Listen for "return-from-story" event
+  useEffect(() => {
+    const handleReturnFromStory = () => {
+      // 1. Show Gallery
+      if (containerRef.current) {
+        gsap.set(containerRef.current, { opacity: 1, pointerEvents: "auto" });
+      }
+
+      // 2. Reverse Exit Animation
+      if (exitTimelineRef.current) {
+        document.body.style.overflow = "hidden"; // Lock while reversing
+
+        exitTimelineRef.current.reverse().then(() => {
+          // 3. Cleanup after reverse
+          document.body.style.overflow = "auto";
+
+          // Resume Orbit
+          if (ringRef.current && activeCardIndexRef.current === null) {
+            orbitTweenRef.current?.kill();
+            orbitTweenRef.current = createOrbitAnimation(ringRef.current);
+          }
+
+          // Ensure everything is interactable
+          isAutoScrolling.current = false;
+        });
+      } else {
+        // Fallback
+        if (containerRef.current) {
+          gsap.set(containerRef.current, {
+            opacity: 1,
+            pointerEvents: "auto",
+          });
+        }
+        const handleResize = () => window.dispatchEvent(new Event("resize"));
+        handleResize();
+      }
+    };
+
+    window.addEventListener("return-from-story", handleReturnFromStory);
+    return () =>
+      window.removeEventListener("return-from-story", handleReturnFromStory);
   }, []);
 
   // Update card positions when radius changes (or gallery loads)
@@ -269,17 +291,20 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
         validCards,
         ringRef.current,
         () => {
+          // On Start (Intro Animation)
+          document.body.style.overflow = "hidden";
+        },
+        () => {
           // On Intro Complete
           setIsIntroComplete(true);
           isIntroCompleteRef.current = true;
+          document.body.style.overflow = "auto"; // Unlock scroll
 
           // Add grace period before allowing reverse (prevents accidental bounce-back)
           setTimeout(() => {
             canReverseRef.current = true;
           }, 500); // Reduced from 1500ms to 500ms for better responsiveness
 
-          // Lock scroll to prevent scrolling away, forcing the reverse gesture
-          document.body.style.overflow = "hidden";
           // Start Orbit
           if (ringRef.current) {
             orbitTweenRef.current = createOrbitAnimation(ringRef.current);
@@ -362,16 +387,138 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       );
     };
 
+    // Exit Animation to Story
+    const handleExitToStory = () => {
+      if (isAutoScrolling.current) return;
+      isAutoScrolling.current = true;
+      document.body.style.overflow = "hidden"; // Lock scroll
+
+      // Pause Orbit
+      orbitTweenRef.current?.pause();
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          // Jump to Story
+          const storySection = document.getElementById("story");
+          if (storySection) {
+            // Use exact calculation for scroll to ensure perfect alignment
+            const rect = storySection.getBoundingClientRect();
+            const scrollTop =
+              window.pageYOffset || document.documentElement.scrollTop;
+            const targetTop = rect.top + scrollTop;
+            window.scrollTo({ top: targetTop, behavior: "auto" });
+
+            // Unlock scroll
+            setTimeout(() => {
+              document.body.style.overflow = "auto";
+              isAutoScrolling.current = false;
+
+              // Hide Gallery elements to prevent obstruction
+              if (containerRef.current) {
+                gsap.set(containerRef.current, {
+                  opacity: 0,
+                  pointerEvents: "none",
+                });
+              }
+
+              // Force ScrollTrigger refresh to ensure Story scene is caught
+              ScrollTrigger.refresh();
+            }, 500);
+          }
+        },
+      });
+      exitTimelineRef.current = tl;
+
+      // 1. Spin Fast & Merge Cards
+      if (ringRef.current) {
+        tl.to(
+          ringRef.current,
+          {
+            rotationY: "+=720", // Fast spin
+            duration: 1.5,
+            ease: "power4.in",
+          },
+          "start",
+        );
+      }
+
+      // Animate all cards to center and fade out
+      cardsRef.current.forEach((card) => {
+        if (card) {
+          tl.to(
+            card,
+            {
+              x: 0,
+              z: 0,
+              rotationY: 0,
+              scale: 0.5,
+              opacity: 0,
+              duration: 1.2,
+              ease: "power2.in",
+            },
+            "start",
+          );
+        }
+      });
+
+      // 2. Reveal Transition Image (Morph)
+      if (transitionImageRef.current) {
+        // Reset state
+        tl.set(
+          transitionImageRef.current,
+          {
+            display: "block",
+            opacity: 0,
+            scale: 0.5,
+            rotation: 0,
+          },
+          "start+=1.0",
+        );
+
+        // Pop in
+        tl.to(
+          transitionImageRef.current,
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.5,
+            ease: "back.out(1.7)",
+          },
+          "start+=1.2",
+        );
+
+        // Zoom to fill screen (transition to Story)
+        tl.to(
+          transitionImageRef.current,
+          {
+            scale: 10, // Massive scale to cover screen
+            opacity: 1,
+            duration: 1.0,
+            ease: "power2.inOut",
+          },
+          "start+=1.7",
+        );
+      }
+    };
+
     // Wheel Handler - scroll up triggers gallery reverse → on complete jump to zodiac + zodiac reverse
     const handleWheel = (e: WheelEvent) => {
       if (!isGalleryInView()) return;
       if (!isIntroCompleteRef.current) return;
 
+      // SCROLL UP -> Reverse to Zodiac
       if (e.deltaY < -5) {
         if (attemptReverse(e)) {
           e.preventDefault();
           e.stopPropagation();
         }
+      }
+      // SCROLL DOWN -> Exit to Story
+      else if (e.deltaY > 5 && activeCardIndexRef.current === null) {
+        // Trigger exit
+        e.preventDefault();
+        e.stopPropagation();
+        handleExitToStory();
       }
     };
 
@@ -413,6 +560,13 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           e.preventDefault();
           e.stopPropagation();
         }
+      }
+      // Scroll Down gesture (swipe up) -> deltaY < 0
+      else if (deltaY < -100 && activeCardIndexRef.current === null) {
+        // Trigger Exit to Story
+        e.preventDefault();
+        e.stopPropagation();
+        handleExitToStory();
       }
     };
 
@@ -679,6 +833,34 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
         className={`${styles.closeHint} ${activeCardIndex !== null ? styles.visible : ""}`}
       >
         Tap anywhere to close
+      </div>
+
+      {/* Transition Image for Exit */}
+      <div
+        ref={transitionImageRef}
+        className={styles.transitionImage}
+        style={{
+          display: "none",
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: "300px", // Base size
+          height: "450px",
+          zIndex: 2000,
+          opacity: 0,
+        }}
+      >
+        <img
+          src="/api/themes/aether/scenes/story/images/how_we_met/001.jpg"
+          alt="Transition"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            borderRadius: "10px",
+          }}
+        />
       </div>
 
       {/* Detached Overlay Card */}
