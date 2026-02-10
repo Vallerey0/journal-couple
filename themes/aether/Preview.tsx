@@ -33,9 +33,10 @@ type PreviewProps = {
     playlist?: any[];
     [key: string]: any;
   };
+  frameCounts?: Record<string, number>;
 };
 
-export default function Preview({ data }: PreviewProps) {
+export default function Preview({ data, frameCounts }: PreviewProps) {
   // Map gallery data to the format expected by GalleryScene
   const galleryItems = (data.gallery || []).map((item: any) => ({
     image: getPublicMediaUrl(item.image_path) || "",
@@ -68,7 +69,7 @@ export default function Preview({ data }: PreviewProps) {
 
       {/* Scene 4: Story */}
       <section id="story">
-        <StoryScene stories={data.stories || []} />
+        <StoryScene stories={data.stories || []} frameCounts={frameCounts} />
       </section>
     </main>
   );

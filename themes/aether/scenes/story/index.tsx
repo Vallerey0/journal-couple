@@ -29,14 +29,6 @@ const PHASE_ORDER = [
   "today",
 ];
 
-const FRAME_COUNTS: Record<string, number> = {
-  how_we_met: 81,
-  getting_closer: 96,
-  turning_point: 96,
-  growing_together: 96,
-  today: 96,
-};
-
 type StoryData = {
   id: string;
   phase_key: string;
@@ -48,9 +40,13 @@ type StoryData = {
 
 type StorySceneProps = {
   stories: StoryData[];
+  frameCounts?: Record<string, number>;
 };
 
-export default function StoryScene({ stories }: StorySceneProps) {
+export default function StoryScene({
+  stories,
+  frameCounts = {},
+}: StorySceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const phaseRefs = useRef<(StoryPhaseHandle | null)[]>([]);
   const tlRef = useRef<gsap.core.Timeline | null>(null);
@@ -241,6 +237,7 @@ export default function StoryScene({ stories }: StorySceneProps) {
           }}
           story={story}
           index={index}
+          frameCount={frameCounts[story.phase_key] || 144}
         />
       ))}
     </div>
@@ -256,16 +253,14 @@ type StoryPhaseHandle = {
 
 const StoryPhase = forwardRef<
   StoryPhaseHandle,
-  { story: StoryData; index: number }
->(({ story, index }, ref) => {
+  { story: StoryData; index: number; frameCount: number }
+>(({ story, index, frameCount }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [imagesLoaded, setImagesLoaded] = useState(false);
   const framesRef = useRef<HTMLImageElement[]>([]);
   const lastFrameIndexRef = useRef<number>(0);
-
-  const frameCount = FRAME_COUNTS[story.phase_key] || 96;
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
@@ -331,6 +326,11 @@ const StoryPhase = forwardRef<
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    // Enable high-quality image smoothing
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
     const img = framesRef.current[index];
     if (!img || !img.complete || img.naturalWidth === 0) return;
 

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getCoupleForTheme } from "@/lib/theme/queries";
+import { getStoryFrameCounts } from "@/lib/theme/frame-counter";
 import { getTheme } from "@/themes/registry";
 import { Metadata } from "next";
 
@@ -91,7 +92,8 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
     const { default: ThemePreview } = await import(
       `@/themes/${theme.code}/Preview`
     );
-    return <ThemePreview data={data} />;
+    const frameCounts = await getStoryFrameCounts(theme.code);
+    return <ThemePreview data={data} frameCounts={frameCounts} />;
   } catch (error) {
     console.error(`[PreviewPage] Failed to load theme: ${theme.code}`, error);
     notFound();

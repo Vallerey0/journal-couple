@@ -136,6 +136,9 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   // Listen for "return-from-story" event
   useEffect(() => {
     const handleReturnFromStory = () => {
+      if (isAutoScrolling.current) return;
+      isAutoScrolling.current = true;
+
       // 1. Show Gallery
       if (containerRef.current) {
         gsap.set(containerRef.current, { opacity: 1, pointerEvents: "auto" });
@@ -315,6 +318,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           setIsIntroComplete(false);
           isIntroCompleteRef.current = false;
           canReverseRef.current = false;
+          isAutoScrolling.current = false; // Reset auto-scroll state
           orbitTweenRef.current?.kill();
           orbitTweenRef.current = null;
 
@@ -360,6 +364,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
     // Manual Reverse Trigger Logic - scroll up in gallery → reverse motion → jump to zodiac
     const attemptReverse = (e?: { preventDefault?: () => void }) => {
       if (!isSceneStableRef.current) return false;
+      if (isAutoScrolling.current) return false;
 
       if (
         isIntroCompleteRef.current &&
@@ -368,6 +373,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
         timelineRef.current &&
         timelineRef.current.progress() > 0.9
       ) {
+        isAutoScrolling.current = true; // Lock interactions
         e?.preventDefault?.();
         document.body.style.overflow = "hidden";
         timelineRef.current.reverse();
@@ -506,6 +512,13 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       if (!isGalleryInView()) return;
       if (!isIntroCompleteRef.current) return;
 
+      // Prevent interactions if auto-scrolling (animation in progress)
+      if (isAutoScrolling.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
       // SCROLL UP -> Reverse to Zodiac
       if (e.deltaY < -5) {
         if (attemptReverse(e)) {
@@ -538,6 +551,14 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
     const handleTouchMove = (e: TouchEvent) => {
       if (!isGalleryInView()) return;
       if (!isIntroCompleteRef.current) return;
+
+      // Prevent interactions if auto-scrolling
+      if (isAutoScrolling.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
       if (
         !isTouchingRef.current ||
         touchStartY.current === null ||
