@@ -301,7 +301,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           // On Intro Complete
           setIsIntroComplete(true);
           isIntroCompleteRef.current = true;
-          document.body.style.overflow = "auto"; // Unlock scroll
+          // document.body.style.overflow = "auto"; // KEEP HIDDEN to prevent native scroll
 
           // Add grace period before allowing reverse (prevents accidental bounce-back)
           setTimeout(() => {
@@ -512,25 +512,22 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       if (!isGalleryInView()) return;
       if (!isIntroCompleteRef.current) return;
 
+      // If card is open, let user interact with it
+      if (activeCardIndexRef.current !== null) return;
+
+      // LOCK PAGE SCROLL completely when in gallery view
+      e.preventDefault();
+      e.stopPropagation();
+
       // Prevent interactions if auto-scrolling (animation in progress)
-      if (isAutoScrolling.current) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
+      if (isAutoScrolling.current) return;
 
       // SCROLL UP -> Reverse to Zodiac
-      if (e.deltaY < -5) {
-        if (attemptReverse(e)) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
+      if (e.deltaY < -1) {
+        attemptReverse(e);
       }
       // SCROLL DOWN -> Exit to Story
-      else if (e.deltaY > 5 && activeCardIndexRef.current === null) {
-        // Trigger exit
-        e.preventDefault();
-        e.stopPropagation();
+      else if (e.deltaY > 1) {
         handleExitToStory();
       }
     };
@@ -552,6 +549,9 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       if (!isGalleryInView()) return;
       if (!isIntroCompleteRef.current) return;
 
+      // If card is open, allow interaction
+      if (activeCardIndexRef.current !== null) return;
+
       // Prevent interactions if auto-scrolling
       if (isAutoScrolling.current) {
         e.preventDefault();
@@ -566,27 +566,40 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       )
         return;
 
-      if (isDraggingRef.current) return;
+      // NOTE: We removed "if (isDraggingRef.current) return;" because on mobile,
+      // a vertical swipe often starts with a slight touch that triggers pointerDown (dragging=true).
+      // If we block it, vertical navigation never happens.
 
       const touchY = e.touches[0].clientY;
       const touchX = e.touches[0].clientX;
       const deltaY = touchY - touchStartY.current;
       const deltaX = touchX - touchStartX.current;
 
-      if (Math.abs(deltaX) > Math.abs(deltaY)) return;
-
-      // Scroll Up gesture (swipe down) -> deltaY > 0
-      if (deltaY > 100) {
-        if (attemptReverse()) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
+      // Detect vertical swipe vs horizontal drag
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // This is a horizontal drag (Orbit Ring)
+        // Let handlePointerMove handle it
+        return;
       }
-      // Scroll Down gesture (swipe up) -> deltaY < 0
-      else if (deltaY < -100 && activeCardIndexRef.current === null) {
+
+      // If we are here, it's a Vertical Swipe (Navigation)
+      // We must cancel the 'dragging' state so the ring doesn't spin wildly
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        setIsDragging(false);
+      }
+
+      // Lock vertical scroll
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Scroll Up gesture (swipe down) -> deltaY > 50
+      if (deltaY > 50) {
+        attemptReverse();
+      }
+      // Scroll Down gesture (swipe up) -> deltaY < -50
+      else if (deltaY < -50 && activeCardIndexRef.current === null) {
         // Trigger Exit to Story
-        e.preventDefault();
-        e.stopPropagation();
         handleExitToStory();
       }
     };
@@ -873,7 +886,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
         }}
       >
         <img
-          src="/api/themes/aether/scenes/story/images/how_we_met/001.jpg"
+          src="/themes/aether/story/how_we_met/001.jpg"
           alt="Transition"
           style={{
             width: "100%",

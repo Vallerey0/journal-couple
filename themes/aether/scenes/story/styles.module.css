@@ -1,58 +1,180 @@
-.container {
+.storyContainer {
+  position: relative;
+  width: 100%;
+  background-color: #000;
+  overflow-x: hidden;
+}
+
+.phaseSection {
   position: relative;
   width: 100%;
   height: 100vh;
   overflow: hidden;
-  background-color: #000;
-  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0; /* Hidden initially, controlled by GSAP */
+  visibility: hidden;
 }
 
-.canvas {
+.phaseSection:first-child {
+  opacity: 1;
+  visibility: visible;
+}
+
+.imageWrapper {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  z-index: 1;
+  will-change: transform, filter, opacity;
 }
 
-.content {
+.storyImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.textOverlay {
   position: absolute;
-  bottom: 10%;
-  left: 5%;
+  top: 15%; /* Positioned at the top area */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10; /* Above image */
+  text-align: center;
   width: 90%;
   max-width: 600px;
-  z-index: 10;
-  opacity: 0; /* Managed by GSAP */
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  pointer-events: none; /* Let clicks pass through to scroll/drag if needed */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  
+  /* Scrollbar hiding for cleaner look */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE 10+ */
 }
 
-.title {
-  font-family: var(--font-dancing, serif);
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  color: #d4af37; /* Gold-ish */
+.textOverlay::-webkit-scrollbar { 
+  display: none; /* Chrome/Safari */
 }
 
-.date {
+.storyTitle {
+  font-family: var(--font-dancing, cursive); /* Romance / Handwriting style */
+  font-size: 3rem; /* Larger for script font */
+  font-weight: 700;
+  color: #fbbf24; /* Amber-400 */
+  margin: 0;
+  line-height: 1.2;
+  text-transform: none; 
+  letter-spacing: normal; 
+  opacity: 0; /* Animate in */
+  animation: fadeInDown 1s ease-out forwards 0.5s;
+  flex-shrink: 0;
+}
+
+.storyDate {
+  font-family: var(--font-sans, sans-serif); /* Keep date legible */
   font-size: 1rem;
-  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #22d3ee;
+  margin: 0;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  opacity: 0.8;
+  letter-spacing: 0.1em;
+  opacity: 0;
+  animation: fadeInUp 1s ease-out forwards 0.8s;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.25em 0.75em;
+  border-radius: 9999px;
+  backdrop-filter: blur(4px);
+  flex-shrink: 0;
 }
 
-.text {
+.storyText {
+  font-family: 'Georgia', 'Times New Roman', serif; /* Serif for romance body text */
   font-size: 1.1rem;
   line-height: 1.6;
+  color: #f3f4f6;
+  margin-top: 1rem;
+  opacity: 0;
+  animation: fadeInUp 1s ease-out forwards 1.1s;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  max-width: 500px;
+  white-space: pre-wrap;
 }
 
-/* Mobile adjustments */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
 @media (max-width: 768px) {
-  .title {
-    font-size: 2rem;
+  .textOverlay {
+    top: 0.5rem; /* Mepet atas */
+    width: 95%;
+    max-height: 30vh; /* Further reduced height (was 40vh) */
+    overflow-y: auto;
+    pointer-events: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 1.5rem;
+    gap: 0.25rem; /* Reduced gap between elements */
+    
+    /* Ensure text is readable against image */
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+    padding-top: 0.5rem; /* Reduced top padding */
+    border-radius: 1rem;
   }
-  .content {
-    bottom: 15%;
+
+  .storyTitle {
+    font-size: 2rem; 
+    margin-bottom: 0; /* Removed bottom margin */
+    line-height: 1.1; /* Tighter line height */
   }
+  
+  .storyDate {
+    font-size: 0.7rem;
+    padding: 0.2em 0.6em; /* Slightly smaller padding */
+    margin-top: 0.1rem;
+  }
+  
+  .storyText {
+    font-size: 0.9rem; 
+    margin-top: 0.5rem; /* Reduced top margin for text */
+    line-height: 1.4; /* Tighter line height */
+    padding: 0 0.5rem; 
+  }
+}
+
+/* Loading state or placeholder if needed */
+.loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 1.2rem;
+  z-index: 10;
 }

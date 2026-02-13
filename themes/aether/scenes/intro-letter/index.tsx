@@ -554,7 +554,8 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         paperContent.contains(e.target as Node)
       ) {
         // 1. PULL DOWN: Reverse letter (Close)
-        if (deltaY < -50 && paperContent.scrollTop <= 0) {
+        // Increased threshold to -120 to prevent accidental triggers (was -50)
+        if (deltaY < -120 && paperContent.scrollTop <= 0) {
           document.body.style.overflow = "hidden";
           timelineRef.current.tweenTo("ready");
           setIsCompleted(false);

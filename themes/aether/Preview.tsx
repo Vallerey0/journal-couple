@@ -46,7 +46,7 @@ export default function Preview({ data, frameCounts }: PreviewProps) {
   }));
 
   return (
-    <main>
+    <main className="mx-auto w-full max-w-[430px] min-h-screen bg-background relative shadow-2xl overflow-hidden">
       {/* Scene 1: Intro */}
       <section id="intro">
         <IntroLetter couple={data} />

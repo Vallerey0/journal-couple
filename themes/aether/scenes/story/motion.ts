@@ -1,180 +1,147 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { StoryData } from "@/app/(app)/(user)/story/_components/story-config";
+import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 
-gsap.registerPlugin(ScrollTrigger);
-
-export type StoryPhaseHandle = {
-  container: HTMLDivElement | null;
-  content: HTMLDivElement | null;
-  setFrame: (progress: number) => void;
-};
-
-interface InitStoryMotionParams {
-  container: HTMLDivElement;
-  sortedStories: StoryData[];
-  phaseRefs: React.MutableRefObject<(StoryPhaseHandle | null)[]>;
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 }
 
-export const initStoryMotion = ({
-  container,
-  sortedStories,
-  phaseRefs,
-}: InitStoryMotionParams) => {
-  const ctx = gsap.context((self) => {
-    // Determine the scroll distance based on number of stories
-    // 250% per story provides a more comfortable scroll pace (reduced from 400%)
-    const scrollDistance = sortedStories.length * 250;
+interface StoryConfig {
+  phase: string;
+  totalFrames: number;
+}
 
-    const tl = gsap.timeline();
+export const initStoryMotion = (
+  container: HTMLElement,
+  imageRef: HTMLImageElement,
+  config: StoryConfig,
+  nextSection?: HTMLElement,
+  prevSection?: HTMLElement,
+  prevTotalFrames?: number,
+  refreshPriority?: number,
+  prevTimeline?: gsap.core.Timeline,
+) => {
+  const { phase, totalFrames } = config;
 
-    // Assign to outer variable for return
-    // We assign it here to ensure it's captured
-    // @ts-ignore
-    self.data.tl = tl;
+  // Initial state
+  gsap.set(container, { autoAlpha: 1 });
+  gsap.set(imageRef, { scale: 1, filter: "blur(0px)", opacity: 1 });
 
-    sortedStories.forEach((story, i) => {
-      // Phase Refs
-      const currentPhase = phaseRefs.current[i];
-      if (!currentPhase) return;
-
-      // 1. Transition In (if not first)
-      if (i > 0) {
-        tl.fromTo(
-          currentPhase.container,
-          { opacity: 0, scale: 1.05, pointerEvents: "none", zIndex: i },
-          {
-            opacity: 1,
-            scale: 1,
-            pointerEvents: "auto",
-            duration: 0.05, // Almost instant for image
-            onStart: () => currentPhase.setFrame(0), // Ensure first frame is shown immediately
-          },
-          ">-0.1", // Overlap
-        );
-
-        // Text Entrance Animation
-        if (currentPhase.content) {
-          tl.fromTo(
-            currentPhase.content,
-            { opacity: 0, y: 50 },
-            { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
-            "<0.1", // Start shortly after container starts
-          );
-        }
-      } else {
-        // First scene: Ensure it's visible
-        tl.set(currentPhase.container, {
-          opacity: 1,
-          scale: 1,
-          pointerEvents: "auto",
-          zIndex: i,
-        });
-
-        // Optional: Ensure text is reset if scrolling back
-        if (currentPhase.content) {
-          tl.set(currentPhase.content, { opacity: 1, y: 0 });
-        }
-      }
-
-      // Add a label at the start of the story content (after transition)
-      // This allows ScrollTrigger to snap exactly to this point
-      tl.addLabel(`story-${i}`);
-
-      // 2. Play Content (Frame Animation)
-      const proxy = { frameProgress: 0 };
-      tl.to(proxy, {
-        frameProgress: 1,
-        duration: 2, // Relative duration for reading content
-        ease: "none",
-        onUpdate: () => {
-          currentPhase.setFrame(proxy.frameProgress);
-        },
-      });
-
-      // Add a label at the end of the story content
-      // This ensures that when scrolling back, we snap to the end of the previous story
-      tl.addLabel(`story-${i}-end`);
-
-      // 3. Transition Out (if not last)
-      if (i < sortedStories.length - 1) {
-        // Fade out without zoom to prevent "retreating" feel
-        tl.to(currentPhase.container, {
-          opacity: 0,
-          // scale: 0.8, // Removed zoom out as per user feedback
-          pointerEvents: "none",
-          duration: 0.3,
-        });
-      }
-    });
-
-    // Create ScrollTrigger with custom Snap logic
-    ScrollTrigger.create({
-      animation: tl,
+  // Main Timeline
+  const tl = gsap.timeline({
+    scrollTrigger: {
       trigger: container,
       start: "top top",
-      end: "+=" + scrollDistance + "%",
+      end: `+=${totalFrames * 25}`,
       pin: true,
-      scrub: 0, // Instant scrubbing for direct control
-      snap: {
-        snapTo: (progress, self) => {
-          const totalDur = tl.duration();
-          if (!totalDur) return progress;
+      scrub: 0.5,
+      refreshPriority: refreshPriority || 0,
 
-          // Define ranges where manual scrolling is allowed (Content zones)
-          // Range is from `story-i` (Start) to `story-i-end` (End)
-          const ranges = sortedStories.map((_, i) => ({
-            start: tl.labels[`story-${i}`] / totalDur,
-            end: tl.labels[`story-${i}-end`] / totalDur,
-          }));
+      // When entering (Forward start or Reverse return), ensure visible
+      onEnter: () => {
+        gsap.to(container, { autoAlpha: 1, duration: 0.5, overwrite: true });
+      },
 
-          // Check if current progress is inside a content range
-          for (const range of ranges) {
-            // Add a tiny buffer to allow snapping to exact start/end
-            if (
-              progress >= range.start - 0.001 &&
-              progress <= range.end + 0.001
-            ) {
-              return progress; // Manual control inside scenes
+      // Use onLeave to handle transition to next section
+      onLeave: () => {
+        if (nextSection) {
+          // 1. Animate current section out (Zoom Out, Blur)
+          gsap.to(imageRef, {
+            scale: 0.85,
+            filter: "blur(8px)",
+            opacity: 0.7,
+            duration: 0.6,
+            ease: "power2.out",
+            onComplete: () => {
+              // 2. INSTANTLY move to next section (no scroll duration)
+              gsap.set(window, {
+                scrollTo: { y: nextSection, autoKill: false },
+              });
+
+              // Ensure next section is visible/ready
+              gsap.set(nextSection, { autoAlpha: 1 });
+              // Fade in next section smoothly
+              gsap.fromTo(
+                nextSection,
+                { opacity: 0 },
+                { opacity: 1, duration: 0.5 },
+              );
+            },
+          });
+        }
+      },
+
+      // Use onLeaveBack to handle transition to previous section
+      onLeaveBack: () => {
+        if (prevSection) {
+          // We are leaving upwards (at start of current section).
+
+          // 1. Force Jump to the exact end of previous section (Last Frame position)
+          // Use the previous timeline's ScrollTrigger end position if available
+          if (prevTimeline) {
+            const prevST = (prevTimeline as any).scrollTrigger;
+            if (prevST && prevST.end !== undefined) {
+              gsap.set(window, {
+                scrollTo: { y: prevST.end, autoKill: false },
+              });
             }
           }
 
-          // Directional Snap Logic for Transition Zones
-          // Collect all boundary points
-          const boundaries: number[] = [];
-          ranges.forEach((r) => {
-            boundaries.push(r.start);
-            boundaries.push(r.end);
-          });
-          boundaries.sort((a, b) => a - b);
+          // 2. Fade out CURRENT section immediately to reveal Previous
+          gsap.set(container, { autoAlpha: 0 });
 
-          // Find the nearest forward and backward boundaries
-          const nextBoundary = boundaries.find((p) => p > progress + 0.0001);
-          const prevBoundary = [...boundaries]
-            .reverse()
-            .find((p) => p < progress - 0.0001);
-
-          if (self && self.direction > 0 && nextBoundary !== undefined) {
-            return nextBoundary;
+          // 3. Find previous image and reset it (Reverse Effect)
+          // "Jalankan reverse effect... Langsung pindah"
+          const prevImg = prevSection.querySelector("img");
+          if (prevImg) {
+            gsap.to(prevImg, {
+              scale: 1,
+              filter: "blur(0px)",
+              opacity: 1,
+              duration: 0.6,
+              ease: "power2.out",
+              overwrite: true,
+            });
           }
-          if (self && self.direction < 0 && prevBoundary !== undefined) {
-            return prevBoundary;
-          }
-
-          // Fallback to closest if direction is 0 or boundaries undefined
-          const closest = boundaries.reduce((prev, curr) =>
-            Math.abs(curr - progress) < Math.abs(prev - progress) ? curr : prev,
-          );
-
-          return closest;
-        },
-        duration: { min: 0.2, max: 0.5 }, // Faster snap
-        delay: 0, // Instant snap
-        ease: "power1.inOut",
+        }
       },
-    });
-  }, container);
 
-  // @ts-ignore
-  return { ctx, tl: ctx.data.tl as gsap.core.Timeline };
+      onEnterBack: () => {
+        // We are entering THIS section from the bottom (reversing from next section).
+        // Ensure we are visible
+        gsap.to(container, { autoAlpha: 1, duration: 0.5, overwrite: true });
+
+        // Reset our state from "Exit" (Zoomed out) to "Normal".
+        gsap.to(imageRef, {
+          scale: 1,
+          filter: "blur(0px)",
+          opacity: 1,
+          duration: 0.6,
+          ease: "power2.out",
+          overwrite: true,
+        });
+      },
+    },
+  });
+
+  // Frame Scrubbing Logic
+  const playhead = { frame: 0 };
+
+  tl.to(playhead, {
+    frame: totalFrames - 1,
+    ease: "none",
+    onUpdate: () => {
+      const frameIndex = Math.floor(playhead.frame);
+      const frameNum = String(frameIndex + 1).padStart(3, "0");
+      const newSrc = `/themes/aether/story/${phase}/${frameNum}.jpg`;
+      if (
+        imageRef.src !== location.origin + newSrc &&
+        imageRef.src.indexOf(newSrc) === -1
+      ) {
+        imageRef.src = newSrc;
+      }
+    },
+  });
+
+  return tl;
 };
