@@ -17,11 +17,6 @@
   visibility: hidden;
 }
 
-.phaseSection:first-child {
-  opacity: 1;
-  visibility: visible;
-}
-
 .imageWrapper {
   position: absolute;
   top: 0;

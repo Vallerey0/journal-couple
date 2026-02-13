@@ -18,7 +18,7 @@ export const buildGalleryTimeline = (
     scrollTrigger: {
       trigger: container,
       start: "top 80%", // Trigger earlier (when top of scene enters viewport)
-      toggleActions: "play none none none", // Play on enter, MANUAL reverse only
+      toggleActions: "play none play reverse", // Play on enter, reverse on leave back
       refreshPriority: 0, // Lowest priority, calculates last
     },
     delay: 0.5, // Wait for Zodiac jump to settle before starting entrance

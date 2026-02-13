@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useLayoutEffect, useRef, useMemo } from "react";
+import React, { useLayoutEffect, useRef, useMemo, useEffect } from "react";
 import localFont from "next/font/local";
 import styles from "./styles.module.css";
 import { initStoryMotion } from "./motion";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 // Font setup
 const dancingScript = localFont({
@@ -41,7 +42,7 @@ export default function StoryScene({
 }: StorySceneProps = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
-  const imageRefs = useRef<(HTMLImageElement | null)[]>([]);
+  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
 
   // Calculate actual phases using props if available, otherwise default
   // Merge frame counts AND story content (title, date)
@@ -68,8 +69,8 @@ export default function StoryScene({
 
       sectionRefs.current.forEach((section, index) => {
         if (!section) return;
-        const img = imageRefs.current[index];
-        if (!img) return;
+        const canvas = canvasRefs.current[index];
+        if (!canvas) return;
 
         const config = {
           phase: phases[index].key,
@@ -78,24 +79,20 @@ export default function StoryScene({
 
         const nextSection = sectionRefs.current[index + 1] || undefined;
         const prevSection = sectionRefs.current[index - 1] || undefined;
-        const prevTotalFrames =
-          index > 0 ? phases[index - 1].frames : undefined;
 
-        // Priority: Higher for earlier sections to ensure correct pin spacing calculations
-        const refreshPriority = (phases.length - index) * 10;
-
-        // Pass previous timeline if available
-        const prevTimeline = index > 0 ? timelines[index - 1] : undefined;
+        // Priority: Use negative values to ensure StoryScene calculates AFTER upstream sections (Intro, Zodiac, Gallery)
+        // Intro (10), Zodiac (5), Gallery (0). So Story should be < 0.
+        // We still need higher priority for earlier story phases relative to later ones.
+        const refreshPriority = -10 - index;
 
         const tl = initStoryMotion(
           section,
-          img,
+          canvas,
           config,
           nextSection,
           prevSection,
-          prevTotalFrames,
           refreshPriority,
-          prevTimeline,
+          index === 0, // isFirstPhase
         );
 
         timelines.push(tl);
@@ -104,6 +101,26 @@ export default function StoryScene({
 
     return () => ctx.revert();
   }, [phases]);
+
+  useEffect(() => {
+    const handleEnterStory = () => {
+      // Allow ScrollTrigger to handle visibility via onEnter to prevent double-reset/flash
+      // We trigger a refresh to ensure GSAP catches the scroll position change immediately
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener("enter-story", handleEnterStory);
+
+    // Force refresh on mount to ensure start positions are correct
+    // This fixes the issue where user has to scroll down before up
+    const timer = setTimeout(() => {
+      ScrollTrigger.refresh();
+    }, 500);
+
+    return () => {
+      window.removeEventListener("enter-story", handleEnterStory);
+      clearTimeout(timer);
+    };
+  }, []);
 
   // Helper to format date safely
   const formatDate = (dateValue?: string | Date) => {
@@ -137,14 +154,13 @@ export default function StoryScene({
           }}
         >
           <div className={styles.imageWrapper}>
-            <img
+            <canvas
               ref={(el) => {
-                imageRefs.current[index] = el;
+                canvasRefs.current[index] = el;
               }}
               className={styles.storyImage}
-              src={`/themes/aether/story/${phase.key}/001.jpg`}
-              alt={phase.key}
-              loading={index === 0 ? "eager" : "lazy"}
+              // Width and Height will be set by JS logic in motion.ts
+              // But we can set a default to avoid layout shift if possible, though CSS handles 100%
             />
           </div>
 

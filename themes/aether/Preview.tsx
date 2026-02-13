@@ -1,6 +1,7 @@
 // themes/aether/Preview.tsx
 "use client";
 
+import MusicPlayer from "./music/MusicPlayer";
 import IntroLetter from "./scenes/intro-letter";
 import ZodiacScene from "./scenes/zodiac";
 import GalleryScene from "./scenes/gallery";
@@ -71,6 +72,9 @@ export default function Preview({ data, frameCounts }: PreviewProps) {
       <section id="story">
         <StoryScene stories={data.stories || []} frameCounts={frameCounts} />
       </section>
+
+      {/* Music Player */}
+      <MusicPlayer playlist={data.playlist} />
     </main>
   );
 }

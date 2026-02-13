@@ -399,7 +399,8 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
     if (!isMounted || !paperContentRef.current) return;
 
     const paperContent = paperContentRef.current;
-    let touchStartY = 0;
+    let touchStartY: number | null = null;
+    let isAtTopOnStart = false;
 
     // --- 1. PAPER SCROLL HANDLER (Inside the letter) ---
     const handlePaperWheel = (e: WheelEvent) => {
@@ -415,7 +416,17 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
       // A. SCROLL UP: Reverse letter (Close)
       if (e.deltaY < 0 && paperContent.scrollTop <= 0) {
         document.body.style.overflow = "hidden"; // Re-lock scroll
-        timelineRef.current.tweenTo("ready");
+        timelineRef.current.tweenTo("ready", {
+          onComplete: () => {
+            const textElements =
+              paperContentRef.current?.querySelectorAll("h1, p");
+            if (textElements) {
+              gsap.set(textElements, {
+                clipPath: "inset(0 100% 0 0)",
+              });
+            }
+          },
+        });
         setIsCompleted(false);
         return;
       }
@@ -530,6 +541,11 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
     const handleTouchStart = (e: TouchEvent) => {
       touchStartY = e.touches[0].clientY;
+      // Capture if we are at the top when the touch begins
+      // This prevents closing the letter when the user is just scrolling up from the bottom
+      if (paperContentRef.current) {
+        isAtTopOnStart = paperContentRef.current.scrollTop <= 5; // Tolerance of 5px
+      }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -545,6 +561,10 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
       if (!timelineRef.current || timelineRef.current.progress() < 0.99) return;
 
+      // GUARD: Ensure touch start was registered in this active session
+      // This prevents "stale" touches (started during writing animation) from triggering actions immediately after completion
+      if (touchStartY === null) return;
+
       const touchY = e.touches[0].clientY;
       const deltaY = touchStartY - touchY; // Positive = Scroll Down (Drag Up)
 
@@ -554,10 +574,20 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         paperContent.contains(e.target as Node)
       ) {
         // 1. PULL DOWN: Reverse letter (Close)
-        // Increased threshold to -120 to prevent accidental triggers (was -50)
-        if (deltaY < -120 && paperContent.scrollTop <= 0) {
+        // Adjusted threshold to -70 to allow easier closing when "stuck" at top
+        if (deltaY < -70 && paperContent.scrollTop <= 1) {
           document.body.style.overflow = "hidden";
-          timelineRef.current.tweenTo("ready");
+          timelineRef.current.tweenTo("ready", {
+            onComplete: () => {
+              const textElements =
+                paperContentRef.current?.querySelectorAll("h1, p");
+              if (textElements) {
+                gsap.set(textElements, {
+                  clipPath: "inset(0 100% 0 0)",
+                });
+              }
+            },
+          });
           setIsCompleted(false);
           return;
         }

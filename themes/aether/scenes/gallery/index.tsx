@@ -136,42 +136,36 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   // Listen for "return-from-story" event
   useEffect(() => {
     const handleReturnFromStory = () => {
-      if (isAutoScrolling.current) return;
-      isAutoScrolling.current = true;
-
-      // 1. Show Gallery
+      // 1. Show Gallery Immediately
       if (containerRef.current) {
         gsap.set(containerRef.current, { opacity: 1, pointerEvents: "auto" });
-      }
-
-      // 2. Reverse Exit Animation
-      if (exitTimelineRef.current) {
-        document.body.style.overflow = "hidden"; // Lock while reversing
-
-        exitTimelineRef.current.reverse().then(() => {
-          // 3. Cleanup after reverse
-          document.body.style.overflow = "auto";
-
-          // Resume Orbit
-          if (ringRef.current && activeCardIndexRef.current === null) {
-            orbitTweenRef.current?.kill();
-            orbitTweenRef.current = createOrbitAnimation(ringRef.current);
-          }
-
-          // Ensure everything is interactable
-          isAutoScrolling.current = false;
+        // Smoothly scroll to Gallery top
+        containerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
         });
-      } else {
-        // Fallback
-        if (containerRef.current) {
-          gsap.set(containerRef.current, {
-            opacity: 1,
-            pointerEvents: "auto",
-          });
-        }
-        const handleResize = () => window.dispatchEvent(new Event("resize"));
-        handleResize();
       }
+
+      // 2. Reverse Exit Animation (Smooth)
+      if (exitTimelineRef.current) {
+        // Reverse the exit timeline to bring cards back gracefully
+        exitTimelineRef.current.reverse();
+      }
+
+      // 3. Ensure overflow is hidden (Gallery uses wheel events)
+      document.body.style.overflow = "hidden";
+
+      // 4. Resume Orbit
+      if (ringRef.current && activeCardIndexRef.current === null) {
+        orbitTweenRef.current?.kill();
+        orbitTweenRef.current = createOrbitAnimation(ringRef.current);
+      }
+
+      // 5. Unlock interaction
+      isAutoScrolling.current = false;
+
+      // Force resize to ensure layout is correct
+      window.dispatchEvent(new Event("resize"));
     };
 
     window.addEventListener("return-from-story", handleReturnFromStory);
@@ -366,17 +360,29 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       if (!isSceneStableRef.current) return false;
       if (isAutoScrolling.current) return false;
 
+      // Ensure we are fully scrolled to top before allowing reverse
+      // This prevents accidental triggers if user is just scrolling normally in a long gallery
+      // BUT this gallery is fixed height.
+
+      // Additional Guard: Check if timeline is fully complete
       if (
         isIntroCompleteRef.current &&
         canReverseRef.current &&
         activeCardIndexRef.current === null &&
         timelineRef.current &&
-        timelineRef.current.progress() > 0.9
+        timelineRef.current.progress() > 0.95 // Ensure almost done
       ) {
-        isAutoScrolling.current = true; // Lock interactions
-        e?.preventDefault?.();
+        isAutoScrolling.current = true; // Lock interactions immediately
+
+        // Disable scroll to prevent native jump
+        if (e && e.preventDefault) e.preventDefault();
         document.body.style.overflow = "hidden";
-        timelineRef.current.reverse();
+
+        timelineRef.current.reverse().then(() => {
+          // Only after reverse is complete, we jump.
+          // The onReverseComplete callback in buildGalleryTimeline handles the jump.
+          // But we ensure overflow stays hidden here.
+        });
         return true;
       }
       return false;
@@ -407,11 +413,16 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           // Jump to Story
           const storySection = document.getElementById("story");
           if (storySection) {
+            // Notify Story Scene to wake up and show itself immediately
+            window.dispatchEvent(new CustomEvent("enter-story"));
+
             // Use exact calculation for scroll to ensure perfect alignment
             const rect = storySection.getBoundingClientRect();
             const scrollTop =
               window.pageYOffset || document.documentElement.scrollTop;
-            const targetTop = rect.top + scrollTop;
+            // Add +2px to ensure we are "inside" the Story section trigger area
+            // This ensures that any upward scroll immediately triggers onLeaveBack
+            const targetTop = rect.top + scrollTop + 2;
             window.scrollTo({ top: targetTop, behavior: "auto" });
 
             // Unlock scroll
@@ -469,6 +480,19 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
 
       // 2. Reveal Transition Image (Morph)
       if (transitionImageRef.current) {
+        // Calculate necessary scale to fill the screen
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        // Base size of transition image is 300x450
+        const baseW = 300;
+        const baseH = 450;
+
+        // Scale needed to cover width and height
+        const scaleW = viewportWidth / baseW;
+        const scaleH = viewportHeight / baseH;
+        // Use max to ensure cover + 20% buffer to be safe
+        const targetScale = Math.max(scaleW, scaleH) * 1.2;
+
         // Reset state
         tl.set(
           transitionImageRef.current,
@@ -481,28 +505,16 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           "start+=1.0",
         );
 
-        // Pop in
+        // Continuous Expansion (Fade In + Scale Up)
         tl.to(
           transitionImageRef.current,
           {
             opacity: 1,
-            scale: 1,
-            duration: 0.5,
-            ease: "back.out(1.7)",
-          },
-          "start+=1.2",
-        );
-
-        // Zoom to fill screen (transition to Story)
-        tl.to(
-          transitionImageRef.current,
-          {
-            scale: 10, // Massive scale to cover screen
-            opacity: 1,
-            duration: 1.0,
+            scale: targetScale,
+            duration: 1.5, // Smooth, continuous zoom
             ease: "power2.inOut",
           },
-          "start+=1.7",
+          "start+=1.0",
         );
       }
     };
