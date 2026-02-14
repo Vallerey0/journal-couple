@@ -51,7 +51,7 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
   const y = useMotionValue(0);
 
   // Constants for consistency
-  const BUBBLE_SIZE = 48;
+  const BUBBLE_SIZE = 56;
   const SNAP_PADDING = 8;
 
   // Initialize position to bottom-right
@@ -65,6 +65,7 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
       y.set(initialY);
 
       // Initial appearance with specific transition to avoid overshoot
+      controls.set({ scale: 0, opacity: 0 }); // Start hidden
       controls.start({
         opacity: 1,
         scale: 1,
@@ -73,6 +74,11 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
     }, 100);
 
     return () => clearTimeout(timer);
+  }, []);
+
+  // Ensure scale is 1 on mount/remount
+  useEffect(() => {
+    controls.set({ scale: 1 });
   }, []);
 
   // Visibility Management
@@ -129,6 +135,7 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
     controls.start({
       x: closest.x,
       y: closest.y,
+      scale: 1,
       transition: { type: "spring", stiffness: 300, damping: 30 },
     });
   };
@@ -227,10 +234,14 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
           isDraggingRef.current = true;
         }}
         onDragEnd={handleDragEnd}
+        onHoverEnd={() => {
+          if (!isDraggingRef.current) {
+            controls.start({ scale: 1 });
+          }
+        }}
         whileHover={{ scale: 1.1 }}
         whileDrag={{ scale: 1.25 }}
         whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, scale: 0.5 }}
         className="fixed top-0 left-0 z-[9999] cursor-pointer shadow-xl rounded-full bg-black/80 backdrop-blur-md p-2 border border-white/10 group flex items-center justify-center"
         onClick={() => {
           if (!isDraggingRef.current) {
@@ -272,9 +283,29 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
 
             {/* Panel */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              style={{
+                transformOrigin:
+                  corner === "tl"
+                    ? "top left"
+                    : corner === "tr"
+                      ? "top right"
+                      : corner === "bl"
+                        ? "bottom left"
+                        : "bottom right",
+              }}
+              initial={{
+                opacity: 0,
+                scale: 0.5,
+                x: corner.includes("r") ? 20 : -20,
+                y: corner.includes("b") ? 20 : -20,
+              }}
+              animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+              exit={{
+                opacity: 0,
+                scale: 0.5,
+                x: corner.includes("r") ? 20 : -20,
+                y: corner.includes("b") ? 20 : -20,
+              }}
               className={`fixed z-[9999] w-72 bg-zinc-900/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden text-white ${
                 corner === "tl"
                   ? "top-6 left-6"

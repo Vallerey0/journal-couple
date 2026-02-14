@@ -6,6 +6,7 @@ import styles from "./styles.module.css";
 import { initStoryMotion } from "./motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { ChevronsDown } from "lucide-react";
 
 // Font setup
 const dancingScript = localFont({
@@ -166,14 +167,21 @@ export default function StoryScene({
 
           {/* Text Overlay - Title, Date, & Story */}
           {(phase.title || phase.date || phase.story) && (
-            <div className={styles.textOverlay}>
-              {phase.title && (
-                <h2 className={styles.storyTitle}>{phase.title}</h2>
-              )}
-              {phase.date && (
-                <div className={styles.storyDate}>{formatDate(phase.date)}</div>
-              )}
-              {phase.story && <p className={styles.storyText}>{phase.story}</p>}
+            <div className={styles.textWrapper}>
+              <div className={styles.textOverlay}>
+                {phase.title && (
+                  <h2 className={styles.storyTitle}>{phase.title}</h2>
+                )}
+                {phase.date && (
+                  <div className={styles.storyDate}>{formatDate(phase.date)}</div>
+                )}
+                {phase.story && <p className={styles.storyText}>{phase.story}</p>}
+              </div>
+
+              {/* Scroll Indicator Below Card */}
+              <div className={styles.cardScrollIndicator}>
+                <ChevronsDown size={20} />
+              </div>
             </div>
           )}
         </section>
