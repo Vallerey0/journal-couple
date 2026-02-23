@@ -11,6 +11,9 @@ import { buildTimeline } from "./motion";
 import { StarBackground } from "./starBackground";
 import paperSrc from "./assets/paper.svg";
 import galaxyBgSrc from "./assets/galaxy-bg.jpg";
+import flowerTopSrc from "./assets/flower-top.png";
+import flowerBottomSrc from "./assets/flower-bottom.png";
+import flowerStemSrc from "./assets/flower.png";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
@@ -47,6 +50,7 @@ interface IntroLetterProps {
 export default function IntroLetterScene({ couple }: IntroLetterProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [resetCount, setResetCount] = useState(0);
 
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
@@ -59,12 +63,19 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const starCanvasRef = useRef<HTMLCanvasElement>(null);
   const lightOrbRef = useRef<HTMLDivElement>(null);
+  const flowerTopRef = useRef<HTMLDivElement>(null);
+  const flowerBottomRef = useRef<HTMLDivElement>(null);
+  const flowerStemLeftRef = useRef<HTMLDivElement>(null);
+  const flowerStemRightRef = useRef<HTMLDivElement>(null);
+  const flowerStemTopRightRef = useRef<HTMLDivElement>(null);
+  const flowerStemTopLeftRef = useRef<HTMLDivElement>(null);
 
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const floatingTweenRef = useRef<gsap.core.Tween | null>(null);
   const breathingTweenRef = useRef<gsap.core.Tween | null>(null);
   const isFloatingRef = useRef(true);
   const autoScrollTriggered = useRef(false);
+  const suppressGlobalHandlersRef = useRef(false);
 
   // Handle Client-Side Mounting (Hydration Fix)
   useEffect(() => {
@@ -220,15 +231,13 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
         context.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Spawn new stars at envelope position - Reduced spawn rate
         if (envelopeWrapperRef.current) {
           const rect = envelopeWrapperRef.current.getBoundingClientRect();
           // Center of envelope
           const centerX = rect.left + rect.width / 2;
           const centerY = rect.top + rect.height / 2;
 
-          // Randomly spawn - Lower probability
-          if (Math.random() > 0.9) {
+          if (Math.random() > 0.85) {
             stars.push(createStar(centerX, centerY));
           }
         }
@@ -306,6 +315,136 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
         startIdleAnimations, // On Ready (Start floating)
       );
 
+      const decorTl = gsap.timeline();
+
+      // TOP FIRST: frame + batang atas
+      if (flowerTopRef.current) {
+        decorTl.fromTo(
+          flowerTopRef.current,
+          { opacity: 0, y: -40 },
+          { opacity: 1, y: 0, duration: 1.1, ease: "power2.out" },
+          0,
+        );
+      }
+
+      if (flowerStemTopLeftRef.current) {
+        gsap.set(flowerStemTopLeftRef.current, {
+          transformOrigin: "bottom center",
+        });
+        decorTl.fromTo(
+          flowerStemTopLeftRef.current,
+          { opacity: 0, x: -40, y: 120, scale: 0.85 },
+          {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 1.1,
+            ease: "power2.out",
+          },
+          0.1,
+        );
+        gsap.to(flowerStemTopLeftRef.current, {
+          rotation: -8,
+          duration: 3.2,
+          delay: 1.6,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+
+      if (flowerStemTopRightRef.current) {
+        gsap.set(flowerStemTopRightRef.current, {
+          transformOrigin: "bottom center",
+        });
+        decorTl.fromTo(
+          flowerStemTopRightRef.current,
+          { opacity: 0, x: 40, y: 120, scale: 0.85 },
+          {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 1.1,
+            ease: "power2.out",
+          },
+          0.2,
+        );
+        gsap.to(flowerStemTopRightRef.current, {
+          rotation: 8,
+          duration: 3.2,
+          delay: 1.6,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+
+      // THEN BOTTOM: frame + batang bawah
+      if (flowerBottomRef.current) {
+        decorTl.fromTo(
+          flowerBottomRef.current,
+          { opacity: 0, y: 40 },
+          { opacity: 1, y: 0, duration: 1.1, ease: "power2.out" },
+          0.6,
+        );
+      }
+
+      // Kiri bawah (normal)
+      if (flowerStemLeftRef.current) {
+        gsap.set(flowerStemLeftRef.current, {
+          transformOrigin: "bottom center",
+        });
+        decorTl.fromTo(
+          flowerStemLeftRef.current,
+          { opacity: 0, x: -80, y: 80, scale: 0.85 },
+          {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 1.1,
+            ease: "power2.out",
+          },
+          0.7,
+        );
+        gsap.to(flowerStemLeftRef.current, {
+          rotation: 6,
+          duration: 3,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+
+      // Kanan bawah = scaleX(-1)
+      if (flowerStemRightRef.current) {
+        gsap.set(flowerStemRightRef.current, {
+          transformOrigin: "bottom center",
+        });
+        decorTl.fromTo(
+          flowerStemRightRef.current,
+          { opacity: 0, x: 80, y: 80, scale: 0.85 },
+          {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            duration: 1.1,
+            ease: "power2.out",
+          },
+          0.8,
+        );
+        gsap.to(flowerStemRightRef.current, {
+          rotation: -6,
+          duration: 3,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+
       // Start the timeline
       timelineRef.current.play();
     }, containerRef);
@@ -318,7 +457,41 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
       if (starBg) starBg.destroy();
       document.body.style.overflow = "";
     };
-  }, [isMounted]);
+  }, [isMounted, resetCount]);
+
+  useEffect(() => {
+    const handleResetIntro = () => {
+      autoScrollTriggered.current = false;
+      suppressGlobalHandlersRef.current = false;
+      setIsCompleted(false);
+      setResetCount((c) => c + 1);
+      if (paperContentRef.current) {
+        paperContentRef.current.scrollTop = 0;
+      }
+      document.body.style.overflow = "hidden";
+      window.scrollTo({ top: 0, behavior: "auto" });
+      setTimeout(() => {
+        try {
+          ScrollTrigger.refresh();
+        } catch {
+          // ignore
+        }
+      }, 300);
+    };
+
+    window.addEventListener("reset-intro", handleResetIntro);
+    return () => window.removeEventListener("reset-intro", handleResetIntro);
+  }, []);
+
+  useEffect(() => {
+    const handleEnterStory = () => {
+      suppressGlobalHandlersRef.current = true;
+      autoScrollTriggered.current = false;
+    };
+
+    window.addEventListener("enter-story", handleEnterStory);
+    return () => window.removeEventListener("enter-story", handleEnterStory);
+  }, []);
 
   // Handle Exit Animation (ScrollTrigger) - Only activate when letter is fully open
   useEffect(() => {
@@ -439,8 +612,13 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
 
     // --- 2. WINDOW SCROLL HANDLER (Transition Zone) ---
     const handleWindowWheel = (e: WheelEvent) => {
-      // Block interaction if auto-scroll is running
+      if (suppressGlobalHandlersRef.current) return;
       if (autoScrollTriggered.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (!isCompleted) {
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -549,6 +727,7 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      if (suppressGlobalHandlersRef.current) return;
       // GUARD: If we are past the intro section, ignore this listener
       if (window.scrollY > 3000) return;
 
@@ -723,6 +902,66 @@ export default function IntroLetterScene({ couple }: IntroLetterProps) {
           className={styles.backgroundImage}
         />
         <canvas ref={starCanvasRef} className={styles.starCanvas} />
+      </div>
+
+      <div className={styles.flowerLayer}>
+        <div ref={flowerTopRef} className={styles.flowerTop}>
+          <Image
+            src={flowerTopSrc}
+            alt="Flower top"
+            fill
+            className={`${styles.flowerImage} ${styles.flowerTopImage}`}
+            priority
+          />
+        </div>
+        <div ref={flowerBottomRef} className={styles.flowerBottom}>
+          <Image
+            src={flowerBottomSrc}
+            alt="Flower bottom"
+            fill
+            className={`${styles.flowerImage} ${styles.flowerBottomImage}`}
+          />
+        </div>
+        <div className={`${styles.flowerStem} ${styles.flowerStemLeft}`}>
+          <div ref={flowerStemLeftRef} className={styles.flowerStemInner}>
+            <Image
+              src={flowerStemSrc}
+              alt="Flower stem left"
+              fill
+              className={styles.flowerImage}
+            />
+          </div>
+        </div>
+        <div className={`${styles.flowerStem} ${styles.flowerStemRight}`}>
+          <div ref={flowerStemRightRef} className={styles.flowerStemInner}>
+            <Image
+              src={flowerStemSrc}
+              alt="Flower stem right"
+              fill
+              className={styles.flowerImage}
+            />
+          </div>
+        </div>
+        <div className={`${styles.flowerStem} ${styles.flowerStemTopRight}`}>
+          <div ref={flowerStemTopRightRef} className={styles.flowerStemInner}>
+            <Image
+              src={flowerStemSrc}
+              alt="Flower stem top right"
+              fill
+              className={styles.flowerImage}
+            />
+          </div>
+        </div>
+        <div className={`${styles.flowerStem} ${styles.flowerStemTopLeft}`}>
+          <div ref={flowerStemTopLeftRef} className={styles.flowerStemInner}>
+            <Image
+              src={flowerStemSrc}
+              alt="Flower stem top left"
+              fill
+              className={styles.flowerImage}
+            />
+          </div>
+        </div>
       </div>
 
       {/* 3D Envelope Wrapper */}

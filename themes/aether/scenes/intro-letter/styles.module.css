@@ -33,6 +33,78 @@
   pointer-events: none;
 }
 
+.flowerLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.flowerTop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+}
+
+.flowerBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+}
+
+.flowerStem {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+}
+
+.flowerStemLeft {
+  bottom: -120px;
+  left: -80px;
+  transform: scale(1, 1);
+}
+
+.flowerStemRight {
+  bottom: -120px;
+  right: -80px;
+  transform: scaleX(-1);
+}
+
+.flowerStemTopRight {
+  top: -120px;
+  right: -80px;
+  transform: scaleX(-1) scaleY(-1);
+}
+
+.flowerStemTopLeft {
+  top: -120px;
+  left: -80px;
+  transform: scaleY(-1);
+}
+
+.flowerStemInner {
+  width: 100%;
+  height: 100%;
+}
+
+.flowerImage {
+  object-fit: contain;
+}
+
+.flowerTopImage {
+  object-fit: cover;
+  object-position: top center;
+}
+
+.flowerBottomImage {
+  object-fit: cover;
+  object-position: bottom center;
+}
+
 /* Container for the whole envelope assembly */
 .envelopeWrapper {
   position: absolute;

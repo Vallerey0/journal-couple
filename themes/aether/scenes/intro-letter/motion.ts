@@ -22,15 +22,14 @@ export const buildTimeline = (
     onComplete,
   });
 
-  // 1. Initial State (Safety)
-  // Calculate initial scale to fit in envelope (approx 0.4 based on standard sizes)
   tl.set(refs.envelopeWrapper, {
     xPercent: -50,
-    yPercent: -50,
+    yPercent: -60,
     rotate: 0,
-    scale: 1, // Always start at full size (no shrinking from 0.5)
-    opacity: 1, // Make visible for entry
-  }) // Start offscreen
+    scale: 0.3,
+    opacity: 0,
+    x: 0,
+  })
     .set(refs.envelopeFlap, { rotationX: 0 }) // Closed
     .set(refs.paperContainer, {
       y: 0,
@@ -43,14 +42,14 @@ export const buildTimeline = (
     })
     .set(refs.paperContent, { opacity: 0 });
 
-  // 2. Envelope Entry
   tl.to(refs.envelopeWrapper, {
-    xPercent: -50, // Center relative to top:50% left:50%
-    yPercent: -50,
-    rotate: 0,
-    scale: 1,
     duration: 1.2,
-    ease: "back.out(0.6)", // Slight bounce to avoid "freeze" feeling
+    ease: "power2.out",
+    keyframes: [
+      { opacity: 1, scale: 0.5, yPercent: -55, x: -20 },
+      { scale: 0.8, yPercent: -52, x: 20 },
+      { scale: 1, yPercent: -50, x: 0 },
+    ],
   });
 
   // 3. Ready State Label

@@ -42,6 +42,7 @@ export default function ZodiacScene({
   const lightSystemRef = useRef<LightParticleSystem | null>(null);
   const isAutoScrolling = useRef(false);
   const isReturningFromGallery = useRef(false);
+  const suppressReverseRef = useRef(false);
 
   // Helper to format date YYYY-MM-DD to DD-MM-YYYY
   const formatDate = (dateStr: string) => {
@@ -180,6 +181,7 @@ export default function ZodiacScene({
   // Handle Return from Gallery with Animation
   useEffect(() => {
     const handleReturn = () => {
+      if (suppressReverseRef.current) return;
       if (!timelineRef.current || !scrollTriggerRef.current) return;
       isReturningFromGallery.current = true;
 
@@ -273,20 +275,45 @@ export default function ZodiacScene({
 
     window.addEventListener("return-from-gallery", handleReturn);
 
-    // Also keep the old reset handler for safety/other cases
     const handleReset = () => {
-      if (!timelineRef.current || !scrollTriggerRef.current) return;
-      // Force state to end (visible content)
-      scrollTriggerRef.current.scroll(scrollTriggerRef.current.end);
+      if (!timelineRef.current) return;
       timelineRef.current.progress(1);
       isAutoScrolling.current = false;
     };
     window.addEventListener("reset-zodiac", handleReset);
 
+    const handleIntroReset = () => {
+      isAutoScrolling.current = false;
+      isReturningFromGallery.current = false;
+      suppressReverseRef.current = true;
+      gsap.killTweensOf(window);
+      setTimeout(() => {
+        suppressReverseRef.current = false;
+      }, 4000);
+    };
+    window.addEventListener("reset-intro", handleIntroReset);
+
     return () => {
       window.removeEventListener("return-from-gallery", handleReturn);
       window.removeEventListener("reset-zodiac", handleReset);
+      window.removeEventListener("reset-intro", handleIntroReset);
     };
+  }, []);
+
+  // Suppress Zodiac manual handlers when entering Story via link
+  useEffect(() => {
+    const handleEnterStory = () => {
+      suppressReverseRef.current = true;
+      isAutoScrolling.current = false;
+      isReturningFromGallery.current = false;
+      gsap.killTweensOf(window);
+      setTimeout(() => {
+        suppressReverseRef.current = false;
+      }, 1500);
+    };
+
+    window.addEventListener("enter-story", handleEnterStory);
+    return () => window.removeEventListener("enter-story", handleEnterStory);
   }, []);
 
   // Handle Scroll Interactions (Unified Card & Window) - Scroll from anywhere when zodiac in view
@@ -315,6 +342,7 @@ export default function ZodiacScene({
         return;
       }
       if (!timelineRef.current || timelineRef.current.time() < 3.5) return;
+      if (suppressReverseRef.current) return;
 
       const { scrollTop, scrollHeight, clientHeight } = cardContent;
       const isScrollDown = e.deltaY > 0;
@@ -443,6 +471,7 @@ export default function ZodiacScene({
     const handleTouchMove = (e: TouchEvent) => {
       if (!isZodiacInView()) return;
       if (!timelineRef.current || timelineRef.current.time() < 3.5) return;
+      if (suppressReverseRef.current) return;
       if (isAutoScrolling.current) {
         e.preventDefault();
         e.stopPropagation();

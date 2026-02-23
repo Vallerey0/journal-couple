@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
+import { navigationState } from "../../navigationState";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
@@ -211,6 +212,7 @@ export const initStoryMotion = (
 
       // Use onLeave to handle transition to next section
       onLeave: () => {
+        if (navigationState.isNavigating) return;
         if (nextSection) {
           // User requested "jump" transition, so we minimize duration
           gsap.to(canvas, {
@@ -232,6 +234,7 @@ export const initStoryMotion = (
 
       // Use onLeaveBack to handle transition to previous section
       onLeaveBack: () => {
+        if (navigationState.isNavigating) return;
         if (prevSection) {
           // Fade out current
           gsap.to(container, { autoAlpha: 0, duration: 0.3 });

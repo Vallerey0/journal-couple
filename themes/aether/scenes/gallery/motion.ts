@@ -6,6 +6,8 @@ gsap.registerPlugin(ScrollTrigger);
 export const buildGalleryTimeline = (
   container: HTMLElement,
   bg: HTMLElement,
+  flowerBg: HTMLElement,
+  leafLayer: HTMLElement,
   altar: HTMLElement,
   spotlight: HTMLElement,
   cards: HTMLElement[],
@@ -32,8 +34,10 @@ export const buildGalleryTimeline = (
     onReverseComplete: () => {
       // Execute callback first (which handles jump and unlock)
       if (onReverse) onReverse();
-      // Reset background to initial state to prevent black flash
+      // Reset background & ornaments to initial state to prevent flash
       gsap.set(bg, { opacity: 0 });
+      gsap.set(flowerBg, { opacity: 0, y: -40 });
+      gsap.set(leafLayer, { opacity: 0 });
     },
   });
 
@@ -49,6 +53,19 @@ export const buildGalleryTimeline = (
       ease: "power2.out",
     },
   )
+    // Phase 1b: Flower frame & petal layer appear
+    .fromTo(
+      flowerBg,
+      { opacity: 0, y: -40 },
+      { opacity: 1, y: 0, duration: 0.9, ease: "power2.out" },
+      "-=0.5",
+    )
+    .fromTo(
+      leafLayer,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.9, ease: "power2.out" },
+      "-=0.7",
+    )
     // Phase 2: Platform & Atmosphere
     .fromTo(
       altar,

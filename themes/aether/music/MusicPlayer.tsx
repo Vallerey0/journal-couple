@@ -22,6 +22,7 @@ import {
   Calendar,
   Image as ImageIcon,
 } from "lucide-react";
+import { navigationState } from "../navigationState";
 
 interface Track {
   id: string;
@@ -54,31 +55,19 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
   const BUBBLE_SIZE = 56;
   const SNAP_PADDING = 8;
 
-  // Initialize position to bottom-right
+  // Initialize position to bottom-right (tanpa flash di kiri atas)
   useEffect(() => {
-    // Wait for window to be available and layout to settle
-    const timer = setTimeout(() => {
-      const initialX = window.innerWidth - BUBBLE_SIZE - SNAP_PADDING;
-      const initialY = window.innerHeight - BUBBLE_SIZE - SNAP_PADDING;
+    const initialX = window.innerWidth - BUBBLE_SIZE - SNAP_PADDING;
+    const initialY = window.innerHeight - BUBBLE_SIZE - SNAP_PADDING;
 
-      x.set(initialX);
-      y.set(initialY);
+    x.set(initialX);
+    y.set(initialY);
 
-      // Initial appearance with specific transition to avoid overshoot
-      controls.set({ scale: 0, opacity: 0 }); // Start hidden
-      controls.start({
-        opacity: 1,
-        scale: 1,
-        transition: { type: "spring", stiffness: 260, damping: 20 },
-      });
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Ensure scale is 1 on mount/remount
-  useEffect(() => {
-    controls.set({ scale: 1 });
+    controls.start({
+      opacity: 1,
+      scale: 1,
+      transition: { type: "spring", stiffness: 260, damping: 20 },
+    });
   }, []);
 
   // Visibility Management
@@ -203,10 +192,60 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-      setIsOpen(false);
+    if (!el) return;
+
+    if (typeof window === "undefined") return;
+
+    navigationState.isNavigating = true;
+
+    if (id !== "intro" && typeof document !== "undefined") {
+      document.body.style.overflow = "auto";
     }
+
+    if (id === "intro") {
+      const rect = el.getBoundingClientRect();
+      const center = window.innerHeight / 2;
+      const isAlreadyInIntro = rect.top <= center && rect.bottom >= center;
+      if (isAlreadyInIntro) {
+        setIsOpen(false);
+        setTimeout(() => {
+          navigationState.isNavigating = false;
+        }, 600);
+        return;
+      }
+
+      window.dispatchEvent(new CustomEvent("reset-intro"));
+      setIsOpen(false);
+      setTimeout(() => {
+        navigationState.isNavigating = false;
+      }, 600);
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+    if (id === "story") {
+      const targetTop = rect.top + scrollTop + 2;
+      window.scrollTo({ top: targetTop, behavior: "auto" });
+    } else {
+      const targetTop = rect.top + scrollTop;
+      window.scrollTo({ top: targetTop, behavior: "auto" });
+    }
+
+    if (id === "gallery") {
+      window.dispatchEvent(new CustomEvent("enter-gallery"));
+    } else if (id === "story") {
+      window.dispatchEvent(new CustomEvent("enter-story"));
+    } else if (id === "zodiac") {
+      window.dispatchEvent(new CustomEvent("reset-zodiac"));
+    }
+
+    setIsOpen(false);
+
+    setTimeout(() => {
+      navigationState.isNavigating = false;
+    }, 600);
   };
 
   // Auto-play on first interaction if not playing
@@ -214,17 +253,41 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
     const handleInteraction = () => {
       if (!hasInteracted && !isPlaying && playlist.length > 0) {
         setHasInteracted(true);
+        setIsPlaying(true);
       }
     };
+
     window.addEventListener("click", handleInteraction, { once: true });
-    return () => window.removeEventListener("click", handleInteraction);
-  }, [hasInteracted, isPlaying, playlist]);
+    window.addEventListener("touchstart", handleInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener("click", handleInteraction);
+      window.removeEventListener("touchstart", handleInteraction);
+    };
+  }, [hasInteracted, isPlaying, playlist.length]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (typeof window === "undefined") return;
+
+    const handlePopState = () => {
+      setIsOpen(false);
+    };
+
+    window.history.pushState({ musicPanel: true }, "");
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [isOpen]);
 
   return (
     <>
       {/* Draggable Bubble - Always Mounted */}
       <motion.div
         key="music-bubble"
+        initial={{ opacity: 0, scale: 0 }}
         drag
         dragMomentum={false}
         dragElastic={0.1}

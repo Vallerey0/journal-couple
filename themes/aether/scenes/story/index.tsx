@@ -105,8 +105,9 @@ export default function StoryScene({
 
   useEffect(() => {
     const handleEnterStory = () => {
-      // Allow ScrollTrigger to handle visibility via onEnter to prevent double-reset/flash
-      // We trigger a refresh to ensure GSAP catches the scroll position change immediately
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "auto";
+      }
       ScrollTrigger.refresh();
     };
     window.addEventListener("enter-story", handleEnterStory);
@@ -173,9 +174,13 @@ export default function StoryScene({
                   <h2 className={styles.storyTitle}>{phase.title}</h2>
                 )}
                 {phase.date && (
-                  <div className={styles.storyDate}>{formatDate(phase.date)}</div>
+                  <div className={styles.storyDate}>
+                    {formatDate(phase.date)}
+                  </div>
                 )}
-                {phase.story && <p className={styles.storyText}>{phase.story}</p>}
+                {phase.story && (
+                  <p className={styles.storyText}>{phase.story}</p>
+                )}
               </div>
 
               {/* Scroll Indicator Below Card */}

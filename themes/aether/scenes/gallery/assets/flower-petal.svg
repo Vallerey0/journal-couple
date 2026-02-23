@@ -1,0 +1,78 @@
+<svg width="140" height="220" viewBox="0 0 140 220" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <!-- Base Galaxy Gradient -->
+    <linearGradient id="petalMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F0ABFC"/>
+      <stop offset="40%" stop-color="#C084FC"/>
+      <stop offset="75%" stop-color="#9333EA"/>
+      <stop offset="100%" stop-color="#6B21A8"/>
+    </linearGradient>
+
+    <!-- Inner Glow -->
+    <radialGradient id="innerGlow" cx="40%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#A855F7" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft blur -->
+    <filter id="blurGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Outer Glow -->
+  <path
+    d="
+      M70 10
+      C110 40, 125 115, 85 185
+      C65 210, 35 190, 25 150
+      C15 110, 35 50, 70 10
+      Z"
+    fill="#A855F7"
+    opacity="0.35"
+    filter="url(#blurGlow)"
+  />
+
+  <!-- Main Petal Shape (Asymmetrical) -->
+  <path
+    d="
+      M70 12
+      C105 42, 120 115, 82 178
+      C60 205, 38 188, 30 150
+      C20 110, 40 55, 70 12
+      Z"
+    fill="url(#petalMain)"
+  />
+
+  <!-- Vein Highlight -->
+  <path
+    d="
+      M70 25
+      C80 70, 78 120, 70 165"
+    stroke="#F5D0FE"
+    stroke-width="2"
+    stroke-linecap="round"
+    opacity="0.35"
+  />
+
+  <!-- Inner Light -->
+  <ellipse
+    cx="65"
+    cy="85"
+    rx="28"
+    ry="55"
+    fill="url(#innerGlow)"
+  />
+
+  <!-- Sparkle Dots -->
+  <circle cx="60" cy="70" r="2" fill="#FFF" opacity="0.8"/>
+  <circle cx="75" cy="95" r="1.8" fill="#FFF" opacity="0.7"/>
+  <circle cx="68" cy="120" r="1.5" fill="#FFF" opacity="0.6"/>
+  <circle cx="55" cy="140" r="1.2" fill="#FFF" opacity="0.6"/>
+
+</svg>

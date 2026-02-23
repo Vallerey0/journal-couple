@@ -10,6 +10,9 @@ import { initFogCanvas } from "./canvasSmoke";
 import { calculateOrbitPosition } from "./orbitMath";
 import { buildGalleryTimeline, createOrbitAnimation } from "./motion";
 import galleryBgSrc from "./assets/gallery-bg.jpg";
+import flowerBgSrc from "./assets/flowerbg.png";
+import flowerPetalSrc from "./assets/flower-petal.svg";
+import { navigationState } from "../../navigationState";
 
 interface GalleryItem {
   image: string | null;
@@ -26,6 +29,8 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLImageElement>(null);
+  const flowerBgRef = useRef<HTMLImageElement>(null);
+  const leafLayerRef = useRef<HTMLDivElement>(null);
 
   const canvasLightRef = useRef<HTMLCanvasElement>(null);
   const canvasSmokeRef = useRef<HTMLCanvasElement>(null);
@@ -40,6 +45,7 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   const isDraggingRef = useRef(false); // Ref for event listeners
   const isSceneStableRef = useRef(false); // Global safety lock on mount
   const isAutoScrolling = useRef(false); // Prevent multiple triggers
+  const suppressReturnToZodiacRef = useRef(false);
   const transitionImageRef = useRef<HTMLDivElement>(null); // Ref for exit transition image
   const touchStartY = useRef<number | null>(null);
   const touchStartX = useRef<number | null>(null);
@@ -136,6 +142,8 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   // Listen for "return-from-story" event
   useEffect(() => {
     const handleReturnFromStory = () => {
+      isAutoScrolling.current = true;
+
       // 1. Show Gallery Immediately
       if (containerRef.current) {
         gsap.set(containerRef.current, { opacity: 1, pointerEvents: "auto" });
@@ -152,25 +160,58 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
         exitTimelineRef.current.reverse();
       }
 
-      // 3. Ensure overflow is hidden (Gallery uses wheel events)
+      // 3. Mark intro as complete again so wheel/touch handlers aktif
+      setIsIntroComplete(true);
+      isIntroCompleteRef.current = true;
+      canReverseRef.current = true;
+
+      // 4. Ensure overflow is hidden (Gallery uses wheel events)
       document.body.style.overflow = "hidden";
 
-      // 4. Resume Orbit
+      // 5. Resume Orbit
       if (ringRef.current && activeCardIndexRef.current === null) {
         orbitTweenRef.current?.kill();
         orbitTweenRef.current = createOrbitAnimation(ringRef.current);
       }
 
-      // 5. Unlock interaction
+      // 6. Unlock interaction
       isAutoScrolling.current = false;
 
-      // Force resize to ensure layout is correct
+      // 7. Force resize to ensure layout is correct
       window.dispatchEvent(new Event("resize"));
     };
 
     window.addEventListener("return-from-story", handleReturnFromStory);
     return () =>
       window.removeEventListener("return-from-story", handleReturnFromStory);
+  }, []);
+
+  useEffect(() => {
+    const handleIntroReset = () => {
+      suppressReturnToZodiacRef.current = true;
+      isAutoScrolling.current = false;
+      setTimeout(() => {
+        suppressReturnToZodiacRef.current = false;
+      }, 4000);
+    };
+
+    window.addEventListener("reset-intro", handleIntroReset);
+    return () => window.removeEventListener("reset-intro", handleIntroReset);
+  }, []);
+
+  // Suppress Gallery wheel/touch handlers when entering Story via link
+  useEffect(() => {
+    const handleEnterStory = () => {
+      isIntroCompleteRef.current = false;
+      canReverseRef.current = false;
+      isAutoScrolling.current = false;
+      if (typeof document !== "undefined") {
+        document.body.style.overflow = "auto";
+      }
+    };
+
+    window.addEventListener("enter-story", handleEnterStory);
+    return () => window.removeEventListener("enter-story", handleEnterStory);
   }, []);
 
   // Update card positions when radius changes (or gallery loads)
@@ -267,11 +308,19 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       gsap.set(altarRef.current, { y: 200, opacity: 0 });
       gsap.set(spotlightRef.current, { opacity: 0 });
     }
+    if (flowerBgRef.current) {
+      gsap.set(flowerBgRef.current, { opacity: 0, y: -40 });
+    }
+    if (leafLayerRef.current) {
+      gsap.set(leafLayerRef.current, { opacity: 0 });
+    }
 
     // Main Timeline
     if (
       containerRef.current &&
       bgRef.current &&
+      flowerBgRef.current &&
+      leafLayerRef.current &&
       altarRef.current &&
       spotlightRef.current &&
       ringRef.current
@@ -283,12 +332,14 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       timelineRef.current = buildGalleryTimeline(
         containerRef.current,
         bgRef.current,
+        flowerBgRef.current,
+        leafLayerRef.current,
         altarRef.current,
         spotlightRef.current,
         validCards,
         ringRef.current,
         () => {
-          // On Start (Intro Animation)
+          if (navigationState.isNavigating) return;
           document.body.style.overflow = "hidden";
         },
         () => {
@@ -337,6 +388,11 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           }
 
           // Jump back to Zodiac and run zodiac reverse (enter) motion
+          if (suppressReturnToZodiacRef.current) {
+            document.body.style.overflow = "auto";
+            return;
+          }
+
           const zodiac = document.getElementById("zodiac");
           if (zodiac) {
             window.dispatchEvent(new CustomEvent("return-from-gallery"));
@@ -521,8 +577,15 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
 
     // Wheel Handler - scroll up triggers gallery reverse → on complete jump to zodiac + zodiac reverse
     const handleWheel = (e: WheelEvent) => {
+      if (navigationState.isNavigating) return;
       if (!isGalleryInView()) return;
-      if (!isIntroCompleteRef.current) return;
+
+      // While intro/exit animations berjalan, blok scroll sepenuhnya
+      if (!isIntroCompleteRef.current || isAutoScrolling.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
 
       // If card is open, let user interact with it
       if (activeCardIndexRef.current !== null) return;
@@ -530,9 +593,6 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       // LOCK PAGE SCROLL completely when in gallery view
       e.preventDefault();
       e.stopPropagation();
-
-      // Prevent interactions if auto-scrolling (animation in progress)
-      if (isAutoScrolling.current) return;
 
       // SCROLL UP -> Reverse to Zodiac
       if (e.deltaY < -1) {
@@ -558,18 +618,18 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      if (navigationState.isNavigating) return;
       if (!isGalleryInView()) return;
-      if (!isIntroCompleteRef.current) return;
 
-      // If card is open, allow interaction
-      if (activeCardIndexRef.current !== null) return;
-
-      // Prevent interactions if auto-scrolling
-      if (isAutoScrolling.current) {
+      // Blok swipe ketika intro/exit timeline masih jalan
+      if (!isIntroCompleteRef.current || isAutoScrolling.current) {
         e.preventDefault();
         e.stopPropagation();
         return;
       }
+
+      // If card is open, allow interaction
+      if (activeCardIndexRef.current !== null) return;
 
       if (
         !isTouchingRef.current ||
@@ -793,6 +853,119 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
           alt="Gallery Background"
           className={styles.bgImage}
           ref={bgRef}
+        />
+        <div className={styles.leafLayer} ref={leafLayerRef}>
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "32%",
+              width: "26px",
+              height: "52px",
+              animationDuration: "12s",
+              animationDelay: "0.5s",
+              ["--start-x" as any]: "-10px",
+              ["--end-x" as any]: "15px",
+              ["--leaf-z" as any]: "-80px",
+            }}
+          />
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "38%",
+              width: "30px",
+              height: "60px",
+              animationDuration: "10.5s",
+              animationDelay: "0s",
+              ["--start-x" as any]: "-5px",
+              ["--end-x" as any]: "25px",
+              ["--leaf-z" as any]: "-40px",
+            }}
+          />
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "44%",
+              width: "34px",
+              height: "68px",
+              animationDuration: "9.5s",
+              animationDelay: "1s",
+              ["--start-x" as any]: "0px",
+              ["--end-x" as any]: "40px",
+              ["--leaf-z" as any]: "-10px",
+            }}
+          />
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "50%",
+              width: "40px",
+              height: "80px",
+              animationDuration: "10.5s",
+              animationDelay: "2s",
+              ["--start-x" as any]: "-10px",
+              ["--end-x" as any]: "20px",
+              ["--leaf-z" as any]: "40px",
+            }}
+          />
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "56%",
+              width: "32px",
+              height: "64px",
+              animationDuration: "8.5s",
+              animationDelay: "3s",
+              ["--start-x" as any]: "10px",
+              ["--end-x" as any]: "-30px",
+              ["--leaf-z" as any]: "-20px",
+            }}
+          />
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "62%",
+              width: "36px",
+              height: "72px",
+              animationDuration: "9.8s",
+              animationDelay: "1.5s",
+              ["--start-x" as any]: "-15px",
+              ["--end-x" as any]: "15px",
+              ["--leaf-z" as any]: "20px",
+            }}
+          />
+          <img
+            src={flowerPetalSrc.src}
+            alt=""
+            className={styles.leaf}
+            style={{
+              left: "68%",
+              width: "24px",
+              height: "48px",
+              animationDuration: "11s",
+              animationDelay: "3.5s",
+              ["--start-x" as any]: "5px",
+              ["--end-x" as any]: "-25px",
+              ["--leaf-z" as any]: "-70px",
+            }}
+          />
+        </div>
+        <img
+          src={flowerBgSrc.src}
+          alt="Flower frame"
+          className={styles.flowerBgTop}
+          ref={flowerBgRef}
         />
       </div>
 
