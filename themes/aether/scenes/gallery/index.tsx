@@ -85,6 +85,28 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   const dragStartX = useRef(0);
   const currentRotation = useRef(0);
 
+  useEffect(() => {
+    const preventScrollDuringAuto = (e: WheelEvent | TouchEvent) => {
+      if (!isAutoScrolling.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener("wheel", preventScrollDuringAuto, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("touchmove", preventScrollDuringAuto, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      window.removeEventListener("wheel", preventScrollDuringAuto, true);
+      window.removeEventListener("touchmove", preventScrollDuringAuto, true);
+    };
+  }, []);
+
   // Handle Resize & Dynamic Radius
   useEffect(() => {
     const handleResize = () => {
@@ -143,42 +165,48 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
   useEffect(() => {
     const handleReturnFromStory = () => {
       isAutoScrolling.current = true;
+      setIsIntroComplete(false);
+      isIntroCompleteRef.current = false;
+      canReverseRef.current = false;
 
-      // 1. Show Gallery Immediately
       if (containerRef.current) {
         gsap.set(containerRef.current, { opacity: 1, pointerEvents: "auto" });
-        // Smoothly scroll to Gallery top
         containerRef.current.scrollIntoView({
           behavior: "smooth",
           block: "start",
         });
       }
 
-      // 2. Reverse Exit Animation (Smooth)
       if (exitTimelineRef.current) {
-        // Reverse the exit timeline to bring cards back gracefully
+        exitTimelineRef.current.eventCallback("onReverseComplete", () => {
+          setIsIntroComplete(true);
+          isIntroCompleteRef.current = true;
+          canReverseRef.current = true;
+          isAutoScrolling.current = false;
+
+          if (ringRef.current && activeCardIndexRef.current === null) {
+            orbitTweenRef.current?.kill();
+            orbitTweenRef.current = createOrbitAnimation(ringRef.current);
+          }
+
+          window.dispatchEvent(new Event("resize"));
+        });
         exitTimelineRef.current.reverse();
+      } else {
+        setIsIntroComplete(true);
+        isIntroCompleteRef.current = true;
+        canReverseRef.current = true;
+        isAutoScrolling.current = false;
+
+        if (ringRef.current && activeCardIndexRef.current === null) {
+          orbitTweenRef.current?.kill();
+          orbitTweenRef.current = createOrbitAnimation(ringRef.current);
+        }
+
+        window.dispatchEvent(new Event("resize"));
       }
 
-      // 3. Mark intro as complete again so wheel/touch handlers aktif
-      setIsIntroComplete(true);
-      isIntroCompleteRef.current = true;
-      canReverseRef.current = true;
-
-      // 4. Ensure overflow is hidden (Gallery uses wheel events)
       document.body.style.overflow = "hidden";
-
-      // 5. Resume Orbit
-      if (ringRef.current && activeCardIndexRef.current === null) {
-        orbitTweenRef.current?.kill();
-        orbitTweenRef.current = createOrbitAnimation(ringRef.current);
-      }
-
-      // 6. Unlock interaction
-      isAutoScrolling.current = false;
-
-      // 7. Force resize to ensure layout is correct
-      window.dispatchEvent(new Event("resize"));
     };
 
     window.addEventListener("return-from-story", handleReturnFromStory);

@@ -52,20 +52,24 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
   const y = useMotionValue(0);
 
   // Constants for consistency
-  const BUBBLE_SIZE = 56;
+  const DESKTOP_BUBBLE_SIZE = 56;
+  const MOBILE_BUBBLE_SIZE = 48;
   const SNAP_PADDING = 8;
 
   // Initialize position to bottom-right (tanpa flash di kiri atas)
   useEffect(() => {
-    const initialX = window.innerWidth - BUBBLE_SIZE - SNAP_PADDING;
-    const initialY = window.innerHeight - BUBBLE_SIZE - SNAP_PADDING;
+    const isMobile = window.innerWidth < 768;
+    const currentSize = isMobile ? MOBILE_BUBBLE_SIZE : DESKTOP_BUBBLE_SIZE;
+
+    const initialX = window.innerWidth - currentSize - SNAP_PADDING;
+    const initialY = window.innerHeight - currentSize - SNAP_PADDING;
 
     x.set(initialX);
     y.set(initialY);
 
     controls.start({
       opacity: 1,
-      scale: 1,
+      // scale removed to prevent conflict with gestures
       transition: { type: "spring", stiffness: 260, damping: 20 },
     });
   }, []);
@@ -87,27 +91,30 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
 
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
+    const isMobile = windowWidth < 768;
+    const currentSize = isMobile ? MOBILE_BUBBLE_SIZE : DESKTOP_BUBBLE_SIZE;
 
+    // Get current position (use info.point for more accuracy on end)
     const currentX = x.get();
     const currentY = y.get();
 
-    // Define 4 corners
+    // Define 4 corners with safety padding
     const corners = [
       { name: "tl", x: SNAP_PADDING, y: SNAP_PADDING },
       {
         name: "tr",
-        x: windowWidth - BUBBLE_SIZE - SNAP_PADDING,
+        x: windowWidth - currentSize - SNAP_PADDING,
         y: SNAP_PADDING,
       },
       {
         name: "bl",
         x: SNAP_PADDING,
-        y: windowHeight - BUBBLE_SIZE - SNAP_PADDING,
+        y: windowHeight - currentSize - SNAP_PADDING,
       },
       {
         name: "br",
-        x: windowWidth - BUBBLE_SIZE - SNAP_PADDING,
-        y: windowHeight - BUBBLE_SIZE - SNAP_PADDING,
+        x: windowWidth - currentSize - SNAP_PADDING,
+        y: windowHeight - currentSize - SNAP_PADDING,
       },
     ] as const;
 
@@ -120,11 +127,12 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
 
     setCorner(closest.name);
 
-    // Animate to snap position
+    // Animate to snap position FORCEFULLY
     controls.start({
       x: closest.x,
       y: closest.y,
-      scale: 1,
+      // scale removed to prevent conflict with gestures
+      opacity: 1, // Ensure visibility
       transition: { type: "spring", stiffness: 300, damping: 30 },
     });
   };
@@ -150,16 +158,19 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
     }
   }, [currentTrack]);
 
-  // Handle Play/Pause
+  // Handle Play/Pause State Sync
   useEffect(() => {
     if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.play().catch((e) => {
-          console.error("Autoplay prevented:", e);
-          setIsPlaying(false);
-        });
-      } else {
+      if (!isPlaying) {
         audioRef.current.pause();
+      } else {
+        // Only try to play if currently paused
+        if (audioRef.current.paused) {
+          audioRef.current.play().catch((e) => {
+            // Quietly fail, interaction handler will fix it
+            console.log("Playback sync waiting for interaction");
+          });
+        }
       }
     }
   }, [isPlaying]);
@@ -172,8 +183,24 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
   }, [isMuted]);
 
   const togglePlay = () => {
-    if (!hasInteracted) setHasInteracted(true);
-    setIsPlaying(!isPlaying);
+    if (!audioRef.current) return;
+
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      // Explicit play call for mobile compatibility
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          setHasInteracted(true);
+        })
+        .catch((e) => {
+          console.error("Manual play failed:", e);
+          setIsPlaying(false);
+        });
+    }
   };
 
   const handleNext = () => {
@@ -248,21 +275,49 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
     }, 600);
   };
 
-  // Auto-play on first interaction if not playing
+  // Auto-play / Unlock Audio on Interaction
   useEffect(() => {
-    const handleInteraction = () => {
-      if (!hasInteracted && !isPlaying && playlist.length > 0) {
-        setHasInteracted(true);
-        setIsPlaying(true);
+    // Only attach if not already interacted and not playing
+    if (hasInteracted || isPlaying || playlist.length === 0) return;
+
+    const unlockAudio = () => {
+      if (!audioRef.current) return;
+
+      // Check if we can play
+      const playPromise = audioRef.current.play();
+
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            console.log("Audio unlocked successfully");
+            setIsPlaying(true);
+            setHasInteracted(true);
+            // Remove listeners only after success
+            window.removeEventListener("touchstart", unlockAudio);
+            window.removeEventListener("click", unlockAudio);
+            window.removeEventListener("keydown", unlockAudio);
+            window.removeEventListener("scroll", unlockAudio);
+          })
+          .catch((e) => {
+            console.log("Auto-unlock prevented:", e);
+            // Don't remove listeners if failed, try again on next interaction
+          });
       }
     };
 
-    window.addEventListener("click", handleInteraction, { once: true });
-    window.addEventListener("touchstart", handleInteraction, { once: true });
+    // Use capture phase to ensure we catch it early
+    const options = { capture: true, once: false }; // Changed once:true to false so we retry if failed
+
+    window.addEventListener("touchstart", unlockAudio, options);
+    window.addEventListener("click", unlockAudio, options);
+    window.addEventListener("keydown", unlockAudio, options);
+    window.addEventListener("scroll", unlockAudio, options); // Added scroll as potential interaction trigger
 
     return () => {
-      window.removeEventListener("click", handleInteraction);
-      window.removeEventListener("touchstart", handleInteraction);
+      window.removeEventListener("touchstart", unlockAudio, options);
+      window.removeEventListener("click", unlockAudio, options);
+      window.removeEventListener("keydown", unlockAudio, options);
+      window.removeEventListener("scroll", unlockAudio, options);
     };
   }, [hasInteracted, isPlaying, playlist.length]);
 
@@ -287,29 +342,36 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
       {/* Draggable Bubble - Always Mounted */}
       <motion.div
         key="music-bubble"
-        initial={{ opacity: 0, scale: 0 }}
+        initial={{ opacity: 0 }}
         drag
         dragMomentum={false}
-        dragElastic={0.1}
+        dragElastic={0.05}
         animate={controls}
-        style={{ x, y, width: BUBBLE_SIZE, height: BUBBLE_SIZE }}
+        style={{
+          x,
+          y,
+          touchAction: "none",
+        }}
         onDragStart={() => {
           isDraggingRef.current = true;
         }}
         onDragEnd={handleDragEnd}
-        onHoverEnd={() => {
+        onTap={() => {
           if (!isDraggingRef.current) {
-            controls.start({ scale: 1 });
+            // Handle tap if needed, but onClick handles toggle
           }
         }}
         whileHover={{ scale: 1.1 }}
-        whileDrag={{ scale: 1.25 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed top-0 left-0 z-[9999] cursor-pointer shadow-xl rounded-full bg-black/80 backdrop-blur-md p-2 border border-white/10 group flex items-center justify-center"
-        onClick={() => {
-          if (!isDraggingRef.current) {
-            setIsOpen(!isOpen);
+        whileDrag={{ scale: 1.2 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed top-0 left-0 z-[9999] cursor-pointer shadow-xl rounded-full bg-black/80 backdrop-blur-md p-2 border border-white/10 group flex items-center justify-center touch-none select-none w-12 h-12 md:w-14 md:h-14"
+        onClick={(e) => {
+          // Prevent click if was dragging
+          if (isDraggingRef.current) {
+            e.stopPropagation();
+            return;
           }
+          setIsOpen(!isOpen);
         }}
       >
         {/* Pulsing effect when playing */}
@@ -318,7 +380,7 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
         )}
 
         {/* Icon Container */}
-        <div className="relative w-10 h-10 flex items-center justify-center">
+        <div className="relative w-8 h-8 md:w-10 md:h-10 flex items-center justify-center">
           <CassetteIcon
             className="w-full h-full text-white"
             isPlaying={isPlaying}

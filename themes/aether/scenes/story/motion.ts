@@ -213,56 +213,77 @@ export const initStoryMotion = (
       // Use onLeave to handle transition to next section
       onLeave: () => {
         if (navigationState.isNavigating) return;
-        if (nextSection) {
-          // User requested "jump" transition, so we minimize duration
-          gsap.to(canvas, {
-            scale: 0.95, // Subtle zoom out
-            filter: "blur(5px)",
-            opacity: 0,
-            duration: 0.5, // Faster fade out
-            ease: "power2.inOut",
-            onComplete: () => {
-              // Instant jump to next section
-              if (nextSection) {
-                nextSection.scrollIntoView({ behavior: "auto" }); // Instant jump
-                gsap.set(nextSection, { autoAlpha: 1 });
-              }
-            },
-          });
+        if (!nextSection) return;
+
+        navigationState.isNavigating = true;
+        if (typeof document !== "undefined") {
+          document.body.style.overflow = "hidden";
         }
+
+        // User requested "jump" transition, so we minimize duration
+        gsap.to(canvas, {
+          scale: 0.95, // Subtle zoom out
+          filter: "blur(5px)",
+          opacity: 0,
+          duration: 0.5, // Faster fade out
+          ease: "power2.inOut",
+          onComplete: () => {
+            // Instant jump to next section
+            nextSection.scrollIntoView({ behavior: "auto" }); // Instant jump
+            gsap.set(nextSection, { autoAlpha: 1 });
+
+            if (typeof document !== "undefined") {
+              document.body.style.overflow = "auto";
+            }
+            navigationState.isNavigating = false;
+          },
+        });
       },
 
       // Use onLeaveBack to handle transition to previous section
       onLeaveBack: () => {
         if (navigationState.isNavigating) return;
+
+        // We are moving to a previous Story phase
         if (prevSection) {
+          navigationState.isNavigating = true;
+          if (typeof document !== "undefined") {
+            document.body.style.overflow = "hidden";
+          }
+
           // Fade out current
           gsap.to(container, { autoAlpha: 0, duration: 0.3 });
 
-          // INSTANT JUMP BACK
-          // When leaving the top of the current section, jump to the bottom of the previous section?
-          // OR simply jump to the top of the previous section (which is start of that story phase)
-          // Based on user request "loncat tanpa harus saya scroll manual", likely means jump to the previous phase fully.
-
-          // However, standard scroll behavior is usually contiguous.
-          // If we want "snap" behavior on reverse similar to forward:
+          // Snap back to previous section
           prevSection.scrollIntoView({ behavior: "auto", block: "end" });
-          // block: "end" aligns the bottom of the element with the bottom of the visible area,
-          // effectively putting us at the END of the previous section (last frame).
+          // Aligns bottom of previous with bottom of viewport (last frame feel)
+
+          setTimeout(() => {
+            if (typeof document !== "undefined") {
+              document.body.style.overflow = "auto";
+            }
+            navigationState.isNavigating = false;
+          }, 400);
         } else {
           // NO prevSection means we are at the FIRST phase.
           // We are exiting Story Mode back to Gallery.
+
+          navigationState.isNavigating = true;
+          if (typeof document !== "undefined") {
+            document.body.style.overflow = "hidden";
+          }
 
           // 1. Dispatch event to wake up Gallery
           window.dispatchEvent(new Event("return-from-story"));
 
           // 2. Reset Playhead to 0 for a fresh start when user returns
-          // This ensures if they come back later, it starts from the beginning
           playhead.frame = 0;
           drawFrame(0);
 
-          // Optional: Scroll slightly up to ensure we leave the trigger area completely
-          // window.scrollBy(0, -1);
+          // Let Gallery own the next scroll state; clear navigating after a short delay
+          setTimeout(() => {
+            navigationState.isNavigating = false;
+          }, 800);
         }
       },
     },

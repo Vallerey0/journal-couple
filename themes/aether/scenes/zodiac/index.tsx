@@ -44,6 +44,28 @@ export default function ZodiacScene({
   const isReturningFromGallery = useRef(false);
   const suppressReverseRef = useRef(false);
 
+  useEffect(() => {
+    const preventScrollDuringAuto = (e: WheelEvent | TouchEvent) => {
+      if (!isAutoScrolling.current) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    window.addEventListener("wheel", preventScrollDuringAuto, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener("touchmove", preventScrollDuringAuto, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      window.removeEventListener("wheel", preventScrollDuringAuto, true);
+      window.removeEventListener("touchmove", preventScrollDuringAuto, true);
+    };
+  }, []);
+
   // Helper to format date YYYY-MM-DD to DD-MM-YYYY
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "";
