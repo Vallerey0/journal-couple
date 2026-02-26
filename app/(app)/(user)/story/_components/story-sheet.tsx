@@ -192,7 +192,7 @@ export function StorySheet({
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="z-[10002] max-h-[96dvh] h-auto rounded-t-[10px] flex flex-col max-w-md mx-auto">
+        <DrawerContent className="z-[10002] max-h-[96dvh] h-auto rounded-t-[20px] flex flex-col max-w-md mx-auto bg-white/90 backdrop-blur-xl dark:bg-zinc-950/90 border-t border-white/20 shadow-2xl">
           <DrawerTitle className="sr-only">
             {mode === "edit" ? "Edit Story" : title}
           </DrawerTitle>
@@ -201,7 +201,7 @@ export function StorySheet({
           </DrawerDescription>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b">
+          <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-200/50 dark:border-white/10">
             {mode === "edit" && defaultData ? (
               <Button
                 autoFocus

@@ -61,7 +61,7 @@ export function GalleryCard({
   }
 
   return (
-    <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted cursor-pointer select-none">
+    <div className="group relative aspect-square overflow-hidden rounded-2xl border border-white/20 bg-white/30 shadow-sm backdrop-blur-sm transition-all hover:shadow-md hover:shadow-pink-500/10 dark:border-white/10 dark:bg-white/5 cursor-pointer select-none">
       {/* IMAGE / PLACEHOLDER */}
       <motion.div
         whileHover={!disabled ? { scale: 1.05 } : {}}

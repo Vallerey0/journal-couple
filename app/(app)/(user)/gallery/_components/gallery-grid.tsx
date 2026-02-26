@@ -195,46 +195,57 @@ export function GalleryGrid({
     <div className="relative pb-24">
       {/* 🔒 STICKY HEADER */}
       <div className="sticky top-0 z-20 mb-6">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 p-6 text-white shadow-lg">
-          <div className="absolute inset-0 bg-white/10 backdrop-blur-xl" />
+        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/30 p-6 text-zinc-800 shadow-xl shadow-pink-500/5 backdrop-blur-xl dark:bg-black/30 dark:text-white">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5" />
 
           <div className="relative z-10 flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-semibold">
-                {reorderMode ? "Atur Urutan" : "Image Gallery"}
-              </h1>
-              <p className="text-xs text-white/80">
-                {reorderMode
-                  ? "Geser bebas untuk mengatur posisi"
-                  : "Simpan momen terbaik kalian"}
+              <h2 className="text-lg font-bold">
+                {count} / {limit} Momen
+              </h2>
+              <p className="text-xs font-medium opacity-80">
+                {isTrial
+                  ? "Trial Plan (Terbatas)"
+                  : isGrace
+                    ? "Masa Tenggang"
+                    : "Premium Plan"}
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex gap-2">
               {reorderMode ? (
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  onClick={handleSaveOrder}
-                  disabled={isSavingOrder}
-                  className="h-9 w-9 rounded-full shadow-sm"
-                >
-                  {isSavingOrder ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 text-emerald-600" />
-                  )}
-                </Button>
-              ) : (
                 <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setReorderMode(false)}
+                    className="h-10 w-10 rounded-full bg-white/20 hover:bg-white/40 text-rose-500 hover:text-rose-600 dark:bg-black/20 dark:hover:bg-black/40"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    onClick={handleSaveOrder}
+                    disabled={isSavingOrder}
+                    className="h-10 w-10 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg hover:shadow-pink-500/25"
+                  >
+                    {isSavingOrder ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Check className="h-5 w-5" />
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <div className="flex gap-2">
                   {!isGrace && count > 1 && (
                     <Button
                       size="icon"
                       variant="ghost"
                       onClick={() => setReorderMode(true)}
-                      className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 text-white"
+                      className="h-10 w-10 rounded-full bg-white/40 hover:bg-white/60 text-zinc-700 dark:bg-white/10 dark:hover:bg-white/20 dark:text-zinc-200"
                     >
-                      <ArrowRightLeft className="h-4 w-4" />
+                      <ArrowLeftRight className="h-5 w-5" />
                     </Button>
                   )}
 
@@ -245,9 +256,19 @@ export function GalleryGrid({
                     limit={limit}
                     coupleId={coupleId}
                   />
-                </>
+                </div>
               )}
             </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-zinc-200/50 dark:bg-white/10">
+            <motion.div
+              className="h-full bg-gradient-to-r from-pink-500 to-purple-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${(count / limit) * 100}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
           </div>
         </div>
       </div>

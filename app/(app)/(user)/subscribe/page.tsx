@@ -207,73 +207,115 @@ export default async function SubscribePage() {
   const pendingPlanName = pendingPlan?.name ?? "Plan";
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">Berlangganan</h1>
-        <p className="text-sm text-muted-foreground">
-          Pilih paket premium untuk membuka semua fitur.
-        </p>
-
-        {isNew ? (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Kamu terdeteksi sebagai user baru. Diskon otomatis akan muncul jika
-            promo tersedia.
-          </p>
-        ) : (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Diskon user baru tidak berlaku karena akun ini sudah punya riwayat
-            pembayaran/langganan.
-          </p>
-        )}
+    <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden">
+      {/* BACKGROUND BLOBS */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
+        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000" />
       </div>
 
-      {pendingIntent ? (
-        <Card className="gap-3 p-4">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">
-              Ada pembayaran yang belum selesai
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Checkout terakhir: {pendingPlanName} •{" "}
-              {formatIDR(Number(pendingIntent.final_price_idr ?? 0))} •{" "}
-              {formatDateTimeID(pendingIntent.created_at)}
-              {pendingIntent.coupon_code
-                ? ` • Kupon ${pendingIntent.coupon_code}`
-                : ""}
-            </p>
-          </div>
+      <div className="relative z-10 w-full px-4 sm:px-0 py-8 max-w-xl mx-auto space-y-8">
+        <div className="text-center space-y-2">
+          <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-3xl sm:text-4xl font-bold text-transparent">
+            Pilih Paket Premium
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Nikmati fitur tanpa batas dan abadikan setiap momen indah kalian.
+          </p>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Button asChild className="w-full">
-              <Link href={`/subscribe/pay?intent=${pendingIntent.id}`}>
-                Lanjutkan pembayaran
-              </Link>
-            </Button>
+          {isNew ? (
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20 backdrop-blur-sm">
+              <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                ✨ Penawaran Pengguna Baru Tersedia
+              </span>
+            </div>
+          ) : (
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-500/10 border border-zinc-500/20 backdrop-blur-sm">
+              <span className="text-xs text-muted-foreground">
+                Diskon pengguna baru tidak berlaku
+              </span>
+            </div>
+          )}
+        </div>
 
-            <Button asChild className="w-full" variant="outline">
-              <a href="#plan">Ganti plan</a>
-            </Button>
+        {pendingIntent ? (
+          <Card className="overflow-hidden border-orange-200/50 bg-white/60 shadow-xl shadow-orange-500/5 backdrop-blur-xl dark:border-orange-500/20 dark:bg-zinc-900/60">
+            <div className="bg-orange-500/10 px-6 py-4 border-b border-orange-500/10">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                </span>
+                <p className="text-sm font-bold text-orange-700 dark:text-orange-400">
+                  Menunggu Pembayaran
+                </p>
+              </div>
+            </div>
 
-            <form action={cancelPendingIntentAction} className="sm:col-span-2">
-              <input type="hidden" name="intent_id" value={pendingIntent.id} />
-              <input type="hidden" name="next" value="/subscribe" />
-              <Button type="submit" variant="ghost" className="w-full">
-                Batalkan checkout
-              </Button>
-            </form>
-          </div>
-        </Card>
-      ) : null}
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Paket Terpilih
+                </p>
+                <div className="flex justify-between items-baseline mt-1">
+                  <h3 className="text-lg font-bold text-foreground">
+                    {pendingPlanName}
+                  </h3>
+                  <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                    {formatIDR(Number(pendingIntent.final_price_idr ?? 0))}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                  <span>
+                    Dibuat: {formatDateTimeID(pendingIntent.created_at)}
+                  </span>
+                  {pendingIntent.coupon_code && (
+                    <span className="px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium">
+                      Kupon: {pendingIntent.coupon_code}
+                    </span>
+                  )}
+                </div>
+              </div>
 
-      <form action={createCheckoutIntentAction} className="space-y-3">
-        <Card className="p-4" id="plan">
-          <p className="text-sm font-semibold">Pilih Plan</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-2">
+                <Button
+                  asChild
+                  className="w-full h-10 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all hover:scale-[1.02]"
+                >
+                  <Link href={`/subscribe/pay?intent=${pendingIntent.id}`}>
+                    Lanjutkan Pembayaran
+                  </Link>
+                </Button>
 
-          <div className="mt-3 grid gap-2">
+                <form action={cancelPendingIntentAction} className="w-full">
+                  <input
+                    type="hidden"
+                    name="intent_id"
+                    value={pendingIntent.id}
+                  />
+                  <input type="hidden" name="next" value="/subscribe" />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    className="w-full h-10 rounded-xl border-zinc-200 bg-white/50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:border-white/10 dark:bg-white/5 dark:hover:bg-red-900/20"
+                  >
+                    Batalkan & Pilih Baru
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </Card>
+        ) : null}
+
+        <form action={createCheckoutIntentAction} className="space-y-6">
+          <div className="space-y-4" id="plan">
             {safePlans.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Belum ada plan aktif. Hubungi admin.
-              </p>
+              <Card className="p-8 text-center border-zinc-200/50 bg-white/50 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/50">
+                <p className="text-muted-foreground">
+                  Belum ada paket tersedia saat ini.
+                </p>
+              </Card>
             ) : (
               safePlans.map((p: any) => {
                 const base = Number(p.price_idr ?? 0);
@@ -284,78 +326,116 @@ export default async function SubscribePage() {
                 return (
                   <label
                     key={p.id}
-                    className="flex items-start gap-3 rounded-xl border p-3"
+                    className="group relative flex cursor-pointer items-start gap-4 rounded-2xl border border-zinc-200/50 bg-white/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:bg-white/80 hover:shadow-lg hover:shadow-pink-500/5 hover:border-pink-500/30 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:bg-zinc-800/80"
                   >
-                    <input
-                      type="radio"
-                      name="plan_id"
-                      value={p.id}
-                      required
-                      className="mt-1"
-                    />
+                    <div className="pt-1">
+                      <input
+                        type="radio"
+                        name="plan_id"
+                        value={p.id}
+                        required
+                        className="peer h-5 w-5 border-2 border-zinc-300 text-pink-500 focus:ring-pink-500 dark:border-zinc-600"
+                      />
+                    </div>
 
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold">{p.name}</span>
-                        <span className="text-xs text-muted-foreground">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
+                            {p.name}
+                          </span>
+                          {disc > 0 && (
+                            <span className="rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                              HEMAT {disc}%
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-muted-foreground">
                           {p.duration_days} hari
                         </span>
-                        {disc > 0 ? (
-                          <span className="rounded-full border px-2 py-0.5 text-[11px]">
-                            Diskon {disc}%
-                          </span>
-                        ) : null}
                       </div>
 
-                      {disc > 0 ? (
-                        <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                          <span className="text-sm line-through text-muted-foreground">
+                      <div className="mt-2 flex items-baseline gap-2">
+                        {disc > 0 ? (
+                          <>
+                            <span className="text-2xl font-bold text-foreground">
+                              {formatIDR(final)}
+                            </span>
+                            <span className="text-sm text-muted-foreground line-through decoration-pink-500/50 decoration-2">
+                              {formatIDR(base)}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-2xl font-bold text-foreground">
                             {formatIDR(base)}
                           </span>
-                          <span className="text-sm font-semibold">
-                            {formatIDR(final)}
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-sm">{formatIDR(base)}</p>
-                      )}
+                        )}
+                      </div>
 
-                      {p.description ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
+                      {p.description && (
+                        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                           {p.description}
                         </p>
-                      ) : null}
+                      )}
                     </div>
+
+                    {/* Selection Ring Animation */}
+                    <div className="absolute inset-0 rounded-2xl border-2 border-transparent transition-all peer-checked:border-pink-500 pointer-events-none" />
                   </label>
                 );
               })
             )}
           </div>
-        </Card>
 
-        <Card className="p-4">
-          <p className="text-sm font-semibold">Kode Kupon (opsional)</p>
-          <p className="text-xs text-muted-foreground">
-            Kupon dihitung saat checkout.
-          </p>
+          <div className="relative">
+            <div
+              className="absolute inset-0 flex items-center"
+              aria-hidden="true"
+            >
+              <div className="w-full border-t border-zinc-200/50 dark:border-white/10"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white/50 px-2 text-xs text-muted-foreground backdrop-blur-xl dark:bg-zinc-950/50 rounded-full">
+                Opsi Tambahan
+              </span>
+            </div>
+          </div>
 
-          <input
-            name="coupon"
-            placeholder="Contoh: JOURNAL50"
-            className="mt-3 w-full rounded-xl border bg-transparent px-3 py-2 text-sm"
-          />
-        </Card>
+          <Card className="p-5 border-zinc-200/50 bg-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/40">
+            <label className="block text-sm font-semibold text-foreground mb-1">
+              Kode Kupon
+            </label>
+            <p className="text-xs text-muted-foreground mb-3">
+              Punya kode promo spesial? Masukkan di sini.
+            </p>
 
-        <Button className="w-full" type="submit">
-          {pendingIntent ? "Buat Checkout Baru" : "Lanjut Pembayaran"}
-        </Button>
+            <div className="relative">
+              <input
+                name="coupon"
+                placeholder="Contoh: JOURNAL50"
+                className="w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 py-2.5 text-sm outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all dark:border-white/10 dark:bg-black/20"
+              />
+              <div className="absolute right-3 top-2.5 text-xs font-bold text-pink-500 pointer-events-none opacity-50">
+                %
+              </div>
+            </div>
+          </Card>
 
-        <p className="text-xs text-muted-foreground">
-          {pendingIntent
-            ? "Ini akan membuat checkout baru. Checkout sebelumnya akan otomatis kedaluwarsa."
-            : "Setelah lanjut, kamu akan masuk halaman konfirmasi checkout."}
-        </p>
-      </form>
+          <div className="pt-2">
+            <Button
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white font-bold text-lg shadow-xl shadow-pink-500/20 hover:shadow-pink-500/40 hover:scale-[1.01] transition-all duration-300"
+              type="submit"
+            >
+              {pendingIntent ? "Buat Pesanan Baru" : "Lanjut ke Pembayaran →"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground mt-3 px-4">
+              {pendingIntent
+                ? "Membuat pesanan baru akan membatalkan tagihan sebelumnya secara otomatis."
+                : "Pembayaran aman & terenkripsi. Kamu bisa membatalkan kapan saja."}
+            </p>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

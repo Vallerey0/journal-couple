@@ -74,14 +74,21 @@ export function CoupleForm({ mode, couple }: Props) {
   );
 
   return (
-    <Card className="p-6">
+    <Card className="border-zinc-200/50 bg-white/50 p-6 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/50">
       <form action={saveCouple} className="space-y-8">
         {/* ================= CORE ================= */}
         <section className="space-y-4">
-          <h2 className="text-sm font-medium">Informasi Dasar</h2>
+          <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            Informasi Dasar
+          </h2>
 
           <Field label="Nama Pasangan 1">
-            <Input name="male_name" defaultValue={couple?.male_name} required />
+            <Input
+              name="male_name"
+              defaultValue={couple?.male_name}
+              required
+              className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
+            />
           </Field>
 
           <Field label="Nama Pasangan 2">
@@ -89,6 +96,7 @@ export function CoupleForm({ mode, couple }: Props) {
               name="female_name"
               defaultValue={couple?.female_name}
               required
+              className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
             />
           </Field>
 
@@ -109,7 +117,7 @@ export function CoupleForm({ mode, couple }: Props) {
               value={stage}
               onValueChange={(v) => setStage(v as Couple["relationship_stage"])}
             >
-              <SelectTrigger className="h-11 w-full">
+              <SelectTrigger className="h-11 w-full border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5">
                 <SelectValue placeholder="Pilih status hubungan" />
               </SelectTrigger>
 
@@ -138,6 +146,7 @@ export function CoupleForm({ mode, couple }: Props) {
               name="notes"
               rows={4}
               defaultValue={couple?.notes ?? ""}
+              className="resize-none border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
             />
           </Field>
         </section>
@@ -148,12 +157,11 @@ export function CoupleForm({ mode, couple }: Props) {
             {/* PROFILE */}
             <section
               id="profile"
-              className="
-    space-y-4 border-t pt-6 scroll-mt-24
-    animate-in fade-in-50 bg-muted/30 rounded-xl p-4
-  "
+              className="animate-in fade-in-50 scroll-mt-24 space-y-4 rounded-xl border border-zinc-200/50 bg-zinc-50/50 p-4 pt-6 dark:border-white/10 dark:bg-white/5"
             >
-              <h2 className="text-sm font-medium">Profil Pasangan</h2>
+              <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Profil Pasangan
+              </h2>
 
               <h3 className="text-xs font-medium text-muted-foreground">
                 Pasangan 1
@@ -163,6 +171,7 @@ export function CoupleForm({ mode, couple }: Props) {
                 name="male_nickname"
                 placeholder="Nama panggilan"
                 defaultValue={couple?.male_nickname ?? ""}
+                className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
 
               <DatePicker
@@ -178,12 +187,14 @@ export function CoupleForm({ mode, couple }: Props) {
                 name="male_city"
                 placeholder="Kota asal"
                 defaultValue={couple?.male_city ?? ""}
+                className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
 
               <Input
                 name="male_hobby"
                 placeholder="Hobi"
                 defaultValue={couple?.male_hobby ?? ""}
+                className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
 
               <h3 className="pt-4 text-xs font-medium text-muted-foreground">
@@ -194,6 +205,7 @@ export function CoupleForm({ mode, couple }: Props) {
                 name="female_nickname"
                 placeholder="Nama panggilan"
                 defaultValue={couple?.female_nickname ?? ""}
+                className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
 
               <DatePicker
@@ -209,28 +221,35 @@ export function CoupleForm({ mode, couple }: Props) {
                 name="female_city"
                 placeholder="Kota asal"
                 defaultValue={couple?.female_city ?? ""}
+                className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
 
               <Input
                 name="female_hobby"
                 placeholder="Hobi"
                 defaultValue={couple?.female_hobby ?? ""}
+                className="border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
             </section>
 
             {/* ANNIVERSARY */}
-            <section className="space-y-4 border-t pt-6">
-              <h2 className="text-sm font-medium">Catatan Anniversary</h2>
+            <section className="space-y-4 border-t border-zinc-200/50 pt-6 dark:border-white/10">
+              <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Catatan Anniversary
+              </h2>
               <Textarea
                 name="anniversary_note"
                 rows={3}
                 defaultValue={couple?.anniversary_note ?? ""}
+                className="resize-none border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
               />
             </section>
 
             {/* PREFERENCES */}
-            <section className="space-y-3 border-t pt-6">
-              <h2 className="text-sm font-medium">Preferensi Tampilan</h2>
+            <section className="space-y-3 border-t border-zinc-200/50 pt-6 dark:border-white/10">
+              <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Preferensi Tampilan
+              </h2>
 
               <SwitchRow
                 name="show_age"
@@ -247,7 +266,10 @@ export function CoupleForm({ mode, couple }: Props) {
           </>
         )}
 
-        <Button type="submit" className="w-full">
+        <Button
+          type="submit"
+          className="group h-12 w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 font-medium text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40"
+        >
           {mode === "create" ? "Simpan Cerita" : "Simpan Perubahan"}
         </Button>
       </form>
@@ -317,7 +339,7 @@ function DatePicker({
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-start text-left font-normal"
+          className="w-full justify-start border-zinc-200/50 bg-white/50 text-left font-normal focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
         >
           {selectedDate ? format(selectedDate, "PPP") : "Pilih tanggal"}
         </Button>

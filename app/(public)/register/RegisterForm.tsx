@@ -25,10 +25,88 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
     <button
       type="submit"
       disabled={isDisabled}
-      className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+      className="group mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-sm font-medium text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40 disabled:opacity-70"
     >
       {pending ? "Memproses..." : "Daftar & Kirim Email Aktivasi"}
     </button>
+  );
+}
+
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null;
+
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  const width = Math.min(100, (score / 4) * 100);
+
+  let label = "Lemah";
+  let color = "bg-rose-500";
+
+  if (score >= 4) {
+    label = "Sangat Kuat";
+    color = "bg-emerald-500";
+  } else if (score === 3) {
+    label = "Kuat";
+    color = "bg-green-500";
+  } else if (score === 2) {
+    label = "Sedang";
+    color = "bg-yellow-500";
+  }
+
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex h-1 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+        <div
+          className={`h-full transition-all duration-300 ${color}`}
+          style={{ width: `${width}%` }}
+        />
+      </div>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        Kekuatan: <span className="font-medium">{label}</span>
+      </p>
+    </div>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7c.44 0 .87-.03 1.28-.09" />
+      <line x1="2" x2="22" y1="2" y2="22" />
+    </svg>
   );
 }
 
@@ -48,6 +126,7 @@ export default function RegisterForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<FieldTouched>({});
   const [checkingEmail, setCheckingEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const serverMessage = state?.message || "";
   const emailExistsFromServer = serverMessage === "EMAIL_EXISTS";
@@ -162,10 +241,10 @@ export default function RegisterForm() {
   const disableSubmit = hasAnyClientError || checkingEmail;
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-5">
       {/* alert global kecil untuk error server */}
       {serverHumanMessage ? (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-200">
+        <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 px-4 py-3 text-sm text-rose-800 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20 dark:text-rose-200">
           <div>{serverHumanMessage}</div>
 
           {emailExistsFromServer ? (
@@ -182,25 +261,27 @@ export default function RegisterForm() {
       ) : null}
 
       <div>
-        <label className="text-sm font-medium">Nama Lengkap</label>
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Nama Lengkap
+        </label>
         <input
           name="full_name"
           value={values.full_name}
           onChange={(e) => setField("full_name", e.target.value)}
           onBlur={() => blurField("full_name")}
           required
-          className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="Nama kamu"
         />
         {touched.full_name && errors.full_name ? (
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-300">
-            {errors.full_name}
-          </p>
+          <p className="mt-1 text-xs text-rose-500">{errors.full_name}</p>
         ) : null}
       </div>
 
       <div>
-        <label className="text-sm font-medium">Email</label>
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Email
+        </label>
         <input
           name="email"
           type="email"
@@ -208,7 +289,7 @@ export default function RegisterForm() {
           onChange={(e) => setField("email", e.target.value)}
           onBlur={blurEmail}
           required
-          className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="nama@email.com"
         />
         {checkingEmail ? (
@@ -217,14 +298,14 @@ export default function RegisterForm() {
           </p>
         ) : null}
         {touched.email && errors.email ? (
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-300">
-            {errors.email}
-          </p>
+          <p className="mt-1 text-xs text-rose-500">{errors.email}</p>
         ) : null}
       </div>
 
       <div>
-        <label className="text-sm font-medium">Nomor HP</label>
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Nomor HP
+        </label>
         <input
           name="phone"
           type="tel"
@@ -232,49 +313,65 @@ export default function RegisterForm() {
           onChange={(e) => setField("phone", e.target.value)}
           onBlur={() => blurField("phone")}
           required
-          className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="08xxxxxxxxxx"
         />
         {touched.phone && errors.phone ? (
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-300">
-            {errors.phone}
-          </p>
+          <p className="mt-1 text-xs text-rose-500">{errors.phone}</p>
         ) : null}
       </div>
 
       <div>
-        <label className="text-sm font-medium">Password</label>
-        <input
-          name="password"
-          type="password"
-          value={values.password}
-          onChange={(e) => setField("password", e.target.value)}
-          onBlur={() => blurField("password")}
-          required
-          className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
-          placeholder="Minimal 8 karakter"
-        />
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Password
+        </label>
+        <div className="relative">
+          <input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            value={values.password}
+            onChange={(e) => setField("password", e.target.value)}
+            onBlur={() => blurField("password")}
+            required
+            autoComplete="new-password"
+            className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 pr-12 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
+            placeholder="Minimal 8 karakter"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+          >
+            {showPassword ? (
+              <EyeOffIcon className="h-5 w-5" />
+            ) : (
+              <EyeIcon className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+        <PasswordStrength password={values.password} />
         {touched.password && errors.password ? (
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-300">
-            {errors.password}
-          </p>
+          <p className="mt-1 text-xs text-rose-500">{errors.password}</p>
         ) : null}
       </div>
 
       <div>
-        <label className="text-sm font-medium">Konfirmasi Password</label>
+        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Konfirmasi Password
+        </label>
         <input
           name="confirm_password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           value={values.confirm_password}
           onChange={(e) => setField("confirm_password", e.target.value)}
           onBlur={() => blurField("confirm_password")}
           required
-          className="mt-1 h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+          autoComplete="new-password"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="Ulangi password"
         />
         {touched.confirm_password && errors.confirm_password ? (
-          <p className="mt-1 text-xs text-rose-600 dark:text-rose-300">
+          <p className="mt-1 text-xs text-rose-500">
             {errors.confirm_password}
           </p>
         ) : null}

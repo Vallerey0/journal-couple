@@ -70,49 +70,83 @@ export default async function SubscribePayPage({
   const final = Number(intent.final_price_idr ?? 0);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-semibold">Pembayaran</h1>
-        <p className="text-sm text-muted-foreground">
-          Konfirmasi checkout, lalu pilih metode pembayaran di bawah.
-        </p>
+    <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden">
+      {/* BACKGROUND BLOBS */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
+        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000" />
       </div>
 
-      <Card className="gap-2 p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">{planName}</p>
-          <p className="text-xs text-muted-foreground">{durationDays} hari</p>
+      <div className="relative z-10 w-full px-4 sm:px-0 py-8 max-w-xl mx-auto space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-2xl sm:text-3xl font-bold text-transparent">
+            Konfirmasi Pembayaran
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Periksa kembali pesananmu sebelum melanjutkan.
+          </p>
         </div>
 
-        <div className="text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Harga</span>
-            <span>{formatIDR(base)}</span>
+        <Card className="gap-4 p-6 border-zinc-200/50 bg-white/50 shadow-xl shadow-pink-500/5 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/50">
+          <div className="flex items-center justify-between border-b border-zinc-200/50 dark:border-white/10 pb-4 mb-4">
+            <p className="text-lg font-bold text-foreground">{planName}</p>
+            <span className="text-xs font-medium px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-muted-foreground">
+              {durationDays} hari
+            </span>
           </div>
 
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Diskon</span>
-            <span>{discount ? `-${discount}%` : "-"}</span>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Harga Paket</span>
+              <span className="font-medium">{formatIDR(base)}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Diskon</span>
+              <span
+                className={
+                  discount
+                    ? "text-green-600 dark:text-green-400 font-medium"
+                    : "text-muted-foreground"
+                }
+              >
+                {discount ? `-${discount}%` : "-"}
+              </span>
+            </div>
+
+            {intent.coupon_code && (
+              <div className="flex justify-between items-center bg-pink-500/5 p-2 rounded-lg border border-pink-500/10">
+                <span className="text-xs text-pink-600 dark:text-pink-400">
+                  Kode Kupon
+                </span>
+                <span className="text-xs font-bold text-pink-700 dark:text-pink-300">
+                  {intent.coupon_code}
+                </span>
+              </div>
+            )}
+
+            <div className="pt-4 mt-4 border-t border-zinc-200/50 dark:border-white/10 flex justify-between items-baseline">
+              <span className="font-semibold text-muted-foreground">
+                Total Pembayaran
+              </span>
+              <span className="text-2xl font-bold bg-gradient-to-br from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                {formatIDR(final)}
+              </span>
+            </div>
           </div>
+        </Card>
 
-          <div className="mt-2 flex justify-between font-semibold">
-            <span>Total</span>
-            <span>{formatIDR(final)}</span>
-          </div>
+        <SnapPayButton intentId={intent.id} />
 
-          {intent.coupon_code ? (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Kupon: {intent.coupon_code}
-            </p>
-          ) : null}
-        </div>
-      </Card>
-
-      <SnapPayButton intentId={intent.id} />
-
-      <Button asChild variant="outline" className="w-full">
-        <Link href="/subscribe">Ganti Plan / Kupon</Link>
-      </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="w-full h-11 rounded-xl border-zinc-200 bg-white/50 hover:bg-white/80 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+        >
+          <Link href="/subscribe">← Ganti Plan / Kupon</Link>
+        </Button>
+      </div>
     </div>
   );
 }

@@ -145,6 +145,12 @@
   }
 }
 
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Midtrans Snap popup: pastikan full-viewport di mobile kecil */
 body > iframe#snap-midtrans {
   width: 100vw !important;

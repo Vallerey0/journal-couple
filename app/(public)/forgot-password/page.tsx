@@ -1,28 +1,31 @@
 import Link from "next/link";
 import ForgotPasswordForm from "./ForgotPasswordForm";
+import LoginClient from "../login/LoginClient";
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-16">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <h1 className="text-2xl font-semibold">Lupa Password</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+    <LoginClient>
+      <div className="mb-8 text-center">
+        <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-3xl font-bold text-transparent">
+          Lupa Password
+        </h1>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           Masukkan email kamu, nanti kami kirim link reset password.
         </p>
-
-        <div className="mt-6">
-          <ForgotPasswordForm />
-        </div>
-
-        <div className="mt-6 text-sm text-zinc-600 dark:text-zinc-300">
-          <Link
-            href="/login"
-            className="font-medium text-zinc-900 dark:text-white"
-          >
-            Kembali ke Login
-          </Link>
-        </div>
       </div>
-    </main>
+
+      <div className="mt-6">
+        <ForgotPasswordForm />
+      </div>
+
+      <div className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <Link
+          href="/login"
+          className="font-medium text-pink-600 hover:text-pink-500 dark:text-pink-400 dark:hover:text-pink-300 transition-colors"
+        >
+          Kembali ke Login
+        </Link>
+      </div>
+    </LoginClient>
   );
 }

@@ -16,7 +16,7 @@ declare global {
           onPending?: (result: unknown) => void;
           onError?: (result: unknown) => void;
           onClose?: () => void;
-        }
+        },
       ) => void;
       pay?: (
         token: string,
@@ -25,7 +25,7 @@ declare global {
           onPending?: (result: unknown) => void;
           onError?: (result: unknown) => void;
           onClose?: () => void;
-        }
+        },
       ) => void;
     };
   }
@@ -119,7 +119,7 @@ export default function SnapPayButton({ intentId }: Props) {
 
       if (!ready) {
         setNote(
-          "Sistem pembayaran belum siap. Coba lagi sebentar atau buka halaman Midtrans."
+          "Sistem pembayaran belum siap. Coba lagi sebentar atau buka halaman Midtrans.",
         );
         return;
       }
@@ -151,7 +151,7 @@ export default function SnapPayButton({ intentId }: Props) {
           onClose: () => {
             setOpen(false);
             setNote(
-              "Pembayaran belum selesai. Kamu bisa melanjutkan kapan saja sebelum batas waktunya."
+              "Pembayaran belum selesai. Kamu bisa melanjutkan kapan saja sebelum batas waktunya.",
             );
           },
         });
@@ -159,7 +159,7 @@ export default function SnapPayButton({ intentId }: Props) {
         setNote(null);
       } catch {
         setNote(
-          "Terjadi kendala saat memuat tampilan pembayaran. Kamu bisa buka halaman Midtrans."
+          "Terjadi kendala saat memuat tampilan pembayaran. Kamu bisa buka halaman Midtrans.",
         );
       }
     }
@@ -173,46 +173,58 @@ export default function SnapPayButton({ intentId }: Props) {
 
   return (
     <>
-      <Card className="gap-3 p-4">
+      <Card className="gap-4 p-6 border-zinc-200/50 bg-white/50 shadow-xl shadow-pink-500/5 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/50">
         <div className="min-w-0">
-          <p className="text-sm font-semibold">Pembayaran</p>
-          <p className="text-xs text-muted-foreground">
-            Pembayaran tampil sebagai popup di halaman ini.
+          <p className="text-sm font-bold text-foreground">Pembayaran</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Klik tombol di bawah untuk membuka popup pembayaran Midtrans.
           </p>
         </div>
 
         <Button
           type="button"
-          className="w-full"
+          className="w-full h-12 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 font-bold text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40"
           onClick={startPayment}
           disabled={loading}
         >
-          {loading ? "Menyiapkan pembayaran..." : "Bayar dengan Midtrans"}
+          {loading ? "Menyiapkan pembayaran..." : "Bayar Sekarang"}
         </Button>
 
         {redirectUrl ? (
           <Button
             type="button"
             variant="ghost"
-            className="w-full"
+            className="w-full rounded-xl text-pink-600 hover:text-pink-700 hover:bg-pink-50 dark:text-pink-400 dark:hover:bg-pink-900/20"
             onClick={() => {
               window.location.href = redirectUrl;
             }}
           >
-            Buka halaman Midtrans
+            Buka halaman Midtrans ↗
           </Button>
         ) : null}
 
         {note ? (
-          <p className="text-center text-xs text-muted-foreground">{note}</p>
+          <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-900/30">
+            <p className="text-center text-xs text-orange-600 dark:text-orange-400">
+              {note}
+            </p>
+          </div>
         ) : (
-          <p className="text-center text-xs text-muted-foreground">
-            Diproses aman melalui mitra resmi (Midtrans).
-          </p>
+          <div className="flex items-center justify-center gap-2 opacity-60">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
+              Powered by Midtrans
+            </span>
+          </div>
         )}
       </Card>
 
-      <div className={open ? "fixed inset-0 z-[100] bg-black/50" : "hidden"}>
+      <div
+        className={
+          open
+            ? "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm transition-all duration-300"
+            : "hidden"
+        }
+      >
         <div className="mx-auto flex h-[100dvh] w-full max-w-md flex-col bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <Button

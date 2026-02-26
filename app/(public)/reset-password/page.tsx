@@ -1,18 +1,21 @@
 import ResetPasswordForm from "./ResetPasswordForm";
+import LoginClient from "../login/LoginClient";
 
 export default function ResetPasswordPage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-16">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <h1 className="text-2xl font-semibold">Buat Password Baru</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+    <LoginClient>
+      <div className="mb-8 text-center">
+        <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-3xl font-bold text-transparent">
+          Buat Password Baru
+        </h1>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           Masukkan password baru untuk akun kamu.
         </p>
-
-        <div className="mt-6">
-          <ResetPasswordForm />
-        </div>
       </div>
-    </main>
+
+      <div className="mt-6">
+        <ResetPasswordForm />
+      </div>
+    </LoginClient>
   );
 }

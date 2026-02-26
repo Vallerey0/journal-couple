@@ -71,14 +71,36 @@ function SubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className={`inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-medium
+      className={`group relative flex h-11 w-full items-center justify-center rounded-xl text-sm font-medium transition-all duration-200
         ${
           disabled || pending
-            ? "bg-zinc-300 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-            : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            ? "cursor-not-allowed bg-zinc-100 text-zinc-400 dark:bg-zinc-800/50 dark:text-zinc-500"
+            : "bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg shadow-pink-500/25 hover:scale-[1.02] hover:shadow-pink-500/40"
         }`}
     >
-      {pending ? "Mengirim..." : label}
+      {pending ? (
+        <span className="flex items-center gap-2">
+          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          Mengirim...
+        </span>
+      ) : (
+        label
+      )}
     </button>
   );
 }
@@ -90,7 +112,7 @@ export default function ResendActivationForm({
 }: Props) {
   const [state, formAction] = React.useActionState<State, FormData>(
     resendActivationAction,
-    {}
+    {},
   );
 
   const initialEmail = email ? normalizeEmail(email) : "";
@@ -144,28 +166,57 @@ export default function ResendActivationForm({
     cooldownLeft > 0
       ? `Kirim ulang (${cooldownLeft}s)`
       : compact
-      ? "Kirim ulang"
-      : "Kirim ulang link aktivasi";
+        ? "Kirim ulang"
+        : "Kirim ulang link aktivasi";
 
   return (
     <div className={compact ? "mt-3" : ""}>
       {message ? (
         <div
-          className={`mb-3 rounded-xl border px-3 py-2 text-sm
+          className={`mb-4 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm backdrop-blur-sm
             ${
               state?.ok
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200"
-                : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-200"
+                ? "border-emerald-200/50 bg-emerald-50/50 text-emerald-800 dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-200"
+                : "border-rose-200/50 bg-rose-50/50 text-rose-800 dark:border-rose-900/30 dark:bg-rose-900/20 dark:text-rose-200"
             }`}
         >
+          {state?.ok ? (
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="mt-0.5 h-4 w-4 shrink-0 text-rose-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+          )}
           {message}
         </div>
       ) : null}
 
       {/* jika email tidak ada dari query -> tampilkan input */}
       {!initialEmail ? (
-        <div className="mb-3">
-          <label className="mb-1 block text-xs text-zinc-600 dark:text-zinc-300">
+        <div className="mb-4">
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Email pendaftaran
           </label>
           <input
@@ -173,7 +224,7 @@ export default function ResendActivationForm({
             value={inputEmail}
             onChange={(e) => setInputEmail(e.target.value)}
             placeholder="nama@email.com"
-            className="h-11 w-full rounded-xl border border-zinc-300 bg-transparent px-3 text-sm text-zinc-900 outline-none focus:border-zinc-500 dark:border-zinc-700 dark:text-zinc-50"
+            className="h-11 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-800 outline-none backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 dark:focus:border-pink-500/50 dark:focus:ring-pink-500/10"
           />
         </div>
       ) : null}
@@ -187,7 +238,7 @@ export default function ResendActivationForm({
       </form>
 
       {!compact ? (
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">
           Tips: cek folder Spam/Promotions. Tunggu 1–2 menit sebelum kirim
           ulang.
         </p>
