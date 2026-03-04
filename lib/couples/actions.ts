@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveSubscription } from "@/lib/subscriptions/guard";
+import { deleteFolderFromR2 } from "@/lib/cloudflare/r2";
 
 /* =====================================================
    INTERNAL GUARD
@@ -162,16 +163,32 @@ export async function saveCouple(formData: FormData): Promise<void> {
   };
 
   /* ---------- UPSERT ---------- */
-  const { data: existingCouple } = await supabase
+  // 1. Cek apakah ada active couple
+  const { data: activeCouple } = await supabase
     .from("couples")
     .select("id")
     .eq("user_id", user.id)
     .is("archived_at", null)
     .maybeSingle();
 
-  if (existingCouple) {
-    await supabase.from("couples").update(payload).eq("id", existingCouple.id);
+  if (activeCouple) {
+    // UPDATE active
+    await supabase.from("couples").update(payload).eq("id", activeCouple.id);
   } else {
+    // 2. Jika tidak ada active, cek apakah ada archived
+    // Gunakan count untuk efisiensi
+    const { count } = await supabase
+      .from("couples")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if (count && count > 0) {
+      // Ada arsip, tidak boleh create baru.
+      // Redirect ke restore (user harus restore atau hapus arsip dulu)
+      redirect("/couple/restore");
+    }
+
+    // 3. Create baru
     // Generate SLUG only on insert
     const slug = await generateUniqueCoupleSlug(
       supabase,
@@ -287,7 +304,7 @@ export async function archiveCouple(): Promise<void> {
 }
 
 /* =====================================================
-   DELETE ACTIVE COUPLE (FIXED)
+   DELETE COUPLE (ACTIVE OR ARCHIVED)
    ===================================================== */
 export async function deleteCouple(formData: FormData): Promise<void> {
   const supabase = await createClient();
@@ -302,13 +319,33 @@ export async function deleteCouple(formData: FormData): Promise<void> {
   const confirmText =
     formData.get("confirm_text")?.toString().trim().toUpperCase() ?? "";
 
+  const coupleId = formData.get("couple_id")?.toString();
+
   if (confirmText !== "HAPUS") return;
 
-  await supabase
+  // Hapus SEMUA couple milik user (karena asumsi 1 akun = 1 couple max)
+  // Tidak peduli aktif atau arsip
+  // 1. Get Couple ID
+  const { data: couple } = await supabase
     .from("couples")
-    .delete()
+    .select("id")
     .eq("user_id", user.id)
-    .is("archived_at", null); // ✅ hanya active
+    .single();
+
+  if (couple) {
+    // 2. Hapus file di R2: users/{userId}/couples/{coupleId}/
+    //    Sesuai struktur folder yang diberikan user
+    const prefix = `users/${user.id}/couples/${couple.id}/`;
+    try {
+      await deleteFolderFromR2(prefix);
+    } catch (error) {
+      console.error("[deleteCouple] Failed to delete R2 folder:", error);
+      // Lanjut hapus data di DB meskipun R2 gagal (best effort)
+    }
+
+    // 3. Delete DB
+    await supabase.from("couples").delete().eq("user_id", user.id);
+  }
 
   revalidatePath("/couple");
   redirect("/couple");
@@ -344,36 +381,4 @@ export async function restoreCouple(coupleId: string): Promise<void> {
 
   revalidatePath("/couple");
   redirect("/couple");
-}
-
-/* =====================================================
-   DELETE ARCHIVED COUPLE (FIXED)
-   ===================================================== */
-export async function deleteArchivedCouple(formData: FormData): Promise<void> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const confirmText =
-    formData.get("confirm_text")?.toString().trim().toUpperCase() ?? "";
-
-  const coupleId = formData.get("couple_id")?.toString();
-
-  if (confirmText !== "HAPUS" || !coupleId) {
-    return;
-  }
-
-  const { error } = await supabase.from("couples").delete().eq("id", coupleId); // ⬅️ BIARKAN RLS YANG CEK user_id
-
-  if (error) {
-    console.error("[deleteArchivedCouple]", error);
-    return;
-  }
-
-  revalidatePath("/couple/restore");
-  redirect("/couple/restore");
 }

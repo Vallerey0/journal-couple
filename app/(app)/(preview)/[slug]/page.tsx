@@ -80,6 +80,38 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
     notFound();
   }
 
+  // Check for Archived status
+  if (data.archived_at) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Archived
+          </h1>
+          <p className="text-muted-foreground">
+            This couple journal is no longer available.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check for Expired status
+  if (data.isExpired) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Expired
+          </h1>
+          <p className="text-muted-foreground">
+            This couple journal is temporarily unavailable.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Fallback theme if null (support legacy data)
   const themeCode = data.theme_code || "aether";
   const theme = await getTheme(themeCode);

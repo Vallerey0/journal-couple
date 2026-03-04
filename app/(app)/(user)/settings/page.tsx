@@ -18,6 +18,7 @@ import {
   Palette,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logoutAction } from "@/app/actions/logout";
 
 export const revalidate = 0;
 
@@ -119,15 +120,8 @@ export default async function SettingsPage() {
   const isPremium = !!profile?.active_until;
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background pb-24">
-      {/* BACKGROUND BLOBS */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
-        <div className="absolute bottom-[20%] left-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000" />
-        <div className="absolute bottom-[-10%] right-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000" />
-      </div>
-
-      <div className="relative z-10 px-5 pt-8 space-y-8">
+    <div className="relative min-h-screen w-full overflow-hidden">
+      <div className="relative z-10 space-y-6 pt-4">
         {/* HEADER */}
         <header>
           <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-purple-500 via-cyan-500 to-pink-500 w-fit">
@@ -417,23 +411,25 @@ export default async function SettingsPage() {
             </Link>
 
             {/* Logout */}
-            <Link
-              href="/logout"
-              className="flex items-center justify-between p-4 hover:bg-red-500/5 transition-colors group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
-                  <LogOut className="w-5 h-5" />
+            <form action={logoutAction} className="w-full">
+              <button
+                type="submit"
+                className="flex w-full items-center justify-between p-4 hover:bg-red-500/5 transition-colors group text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-red-500">Keluar</p>
+                    <p className="text-xs text-red-500/60">
+                      Logout dari sesi ini
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-sm text-red-500">Keluar</p>
-                  <p className="text-xs text-red-500/60">
-                    Logout dari sesi ini
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-red-500/50 group-hover:text-red-500 transition-colors" />
-            </Link>
+                <ChevronRight className="w-5 h-5 text-red-500/50 group-hover:text-red-500 transition-colors" />
+              </button>
+            </form>
           </div>
         </section>
 

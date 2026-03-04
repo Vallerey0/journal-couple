@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
-import { requireActiveSubscription } from "@/lib/subscriptions/guard";
-import { getActiveCouple } from "@/lib/couples/queries";
+import { guardFeatureAccess } from "@/lib/subscriptions/guard";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicMediaUrl } from "@/lib/media/url";
 import { Metadata } from "next";
@@ -13,21 +11,9 @@ export const metadata: Metadata = {
 
 export default async function GalleryPage() {
   /* =====================================================
-     SUBSCRIPTION GUARD
+     SUBSCRIPTION & COUPLE GUARD
      ===================================================== */
-  const sub = await requireActiveSubscription();
-
-  if (!sub.allowed) {
-    redirect("/subscribe");
-  }
-
-  /* =====================================================
-     ACTIVE COUPLE
-     ===================================================== */
-  const couple = await getActiveCouple();
-  if (!couple) {
-    redirect("/couple/new");
-  }
+  const { couple, subscription: sub } = await guardFeatureAccess();
 
   /* =====================================================
      FETCH GALLERY ITEMS (PATH ONLY)

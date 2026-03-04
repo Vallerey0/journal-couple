@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getActiveCouple } from "@/lib/couples/queries";
+import { getActiveCouple, getArchivedCouples } from "@/lib/couples/queries";
 import { CoupleForm } from "../_components/couple-form";
 
 export default async function NewCouplePage() {
@@ -8,6 +8,12 @@ export default async function NewCouplePage() {
   // tidak boleh create kalau sudah ada couple aktif
   if (couple) {
     redirect("/couple");
+  }
+
+  // tidak boleh create kalau sudah ada arsip (satu couple policy)
+  const archivedCouples = await getArchivedCouples();
+  if (archivedCouples.length > 0) {
+    redirect("/couple/restore");
   }
 
   return (

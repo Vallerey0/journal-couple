@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { getStoryPhases } from "@/lib/stories/queries";
 import { StoryTimeline } from "./_components/story-timeline";
+import { guardFeatureAccess } from "@/lib/subscriptions/guard";
 
 export const metadata: Metadata = {
   title: "Our Story",
@@ -8,6 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default async function StoryPage() {
+  await guardFeatureAccess();
+
   const storyData = await getStoryPhases();
 
   return (

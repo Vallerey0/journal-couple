@@ -2,6 +2,8 @@ import Link from "next/link";
 import LoginForm from "./LoginForm";
 import ResendActivationForm from "../activate/ResendActivationForm";
 import LoginClient from "./LoginClient";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CircleAlert, Info, CircleCheck } from "lucide-react";
 
 type SP = {
   activated?: string;
@@ -66,39 +68,50 @@ export default async function LoginPage({
         </p>
       </div>
 
-      {/* Error (ramah user) */}
       {errorMsg ? (
-        <div className="mb-6 rounded-2xl border border-rose-200/50 bg-rose-50/50 px-4 py-3 text-sm text-rose-800 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20 dark:text-rose-200">
-          {errorMsg}
-        </div>
+        <Alert
+          variant="destructive"
+          className="mb-6 rounded-2xl border-rose-200/50 bg-rose-50/50 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20"
+        >
+          <CircleAlert />
+          <AlertDescription>{errorMsg}</AlertDescription>
+        </Alert>
       ) : null}
 
-      {/* Akun sudah aktif */}
       {already ? (
-        <div className="mb-6 rounded-2xl border border-amber-200/50 bg-amber-50/50 px-4 py-3 text-sm text-amber-800 backdrop-blur-sm dark:border-amber-900/30 dark:bg-amber-900/20 dark:text-amber-200">
-          Akun kamu sudah aktif. Silakan login.
-        </div>
+        <Alert className="mb-6 rounded-2xl border-amber-200/50 bg-amber-50/50 backdrop-blur-sm dark:border-amber-900/30 dark:bg-amber-900/20">
+          <Info />
+          <AlertDescription>
+            Akun kamu sudah aktif. Silakan login.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {/* Baru selesai aktivasi */}
       {activated && !already ? (
-        <div className="mb-6 rounded-2xl border border-emerald-200/50 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-800 backdrop-blur-sm dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-200">
-          Akun berhasil diaktivasi. Silakan login.
-        </div>
+        <Alert className="mb-6 rounded-2xl border-emerald-200/50 bg-emerald-50/50 backdrop-blur-sm dark:border-emerald-900/30 dark:bg-emerald-900/20">
+          <CircleCheck />
+          <AlertDescription>
+            Akun berhasil diaktivasi. Silakan login.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {/* Belum aktivasi */}
       {unverified ? (
-        <div className="mb-6 rounded-2xl border border-rose-200/50 bg-rose-50/50 px-4 py-3 text-sm text-rose-800 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20 dark:text-rose-200">
-          Akun belum diaktivasi. Silakan cek email aktivasi.
-        </div>
+        <Alert className="mb-6 rounded-2xl border-rose-200/50 bg-rose-50/50 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20">
+          <Info />
+          <AlertDescription>
+            Akun belum diaktivasi. Silakan cek email aktivasi.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
-      {/* Reset password sukses */}
       {resetOk ? (
-        <div className="mb-6 rounded-2xl border border-emerald-200/50 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-800 backdrop-blur-sm dark:border-emerald-900/30 dark:bg-emerald-900/20 dark:text-emerald-200">
-          Password berhasil diubah. Silakan login.
-        </div>
+        <Alert className="mb-6 rounded-2xl border-emerald-200/50 bg-emerald-50/50 backdrop-blur-sm dark:border-emerald-900/30 dark:bg-emerald-900/20">
+          <CircleCheck />
+          <AlertDescription>
+            Password berhasil diubah. Silakan login.
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {/* ✅ Resend activation: hanya saat unverified */}

@@ -1,10 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { resetPasswordAction } from "./actions";
 
 type State = { message?: string };
+type Field = "password" | "confirm_password";
+type FieldErrors = Partial<Record<Field, string>>;
+type FieldTouched = Partial<Record<Field, boolean>>;
 
 function PasswordStrength({ password }: { password: string }) {
   if (!password) return null;
@@ -84,12 +87,12 @@ function EyeOffIcon({ className }: { className?: string }) {
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      disabled={pending}
+      disabled={pending || disabled}
       className="group mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-sm font-medium text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40 disabled:opacity-70"
     >
       {pending ? "Menyimpan..." : "Simpan Password Baru"}
@@ -104,7 +107,34 @@ export default function ResetPasswordForm() {
   );
 
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<FieldTouched>({});
   const [showPassword, setShowPassword] = useState(false);
+
+  function validate(name: Field, nextPassword = password, nextConfirm = confirm) {
+    if (name === "password") {
+      if (!nextPassword) return "Password wajib diisi.";
+      if (nextPassword.length < 8) return "Minimal 8 karakter.";
+      return "";
+    }
+    if (name === "confirm_password") {
+      if (!nextConfirm) return "Konfirmasi password wajib diisi.";
+      if (nextConfirm !== nextPassword) return "Konfirmasi password tidak sama.";
+      return "";
+    }
+    return "";
+  }
+
+  const disableSubmit = useMemo(
+    () =>
+      !password ||
+      password.length < 8 ||
+      !confirm ||
+      confirm !== password ||
+      Object.values(errors).some(Boolean),
+    [password, confirm, errors],
+  );
 
   return (
     <form action={formAction} className="space-y-5">
@@ -125,7 +155,23 @@ export default function ResetPasswordForm() {
             required
             autoComplete="new-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setPassword(v);
+              if (touched.password) {
+                const err = validate("password", v, confirm);
+                setErrors((p) => ({ ...p, password: err }));
+              }
+              if (touched.confirm_password) {
+                const errC = validate("confirm_password", v, confirm);
+                setErrors((p) => ({ ...p, confirm_password: errC }));
+              }
+            }}
+            onBlur={() => {
+              setTouched((p) => ({ ...p, password: true }));
+              const err = validate("password", password, confirm);
+              setErrors((p) => ({ ...p, password: err }));
+            }}
             className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 pr-12 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
             placeholder="Minimal 8 karakter"
           />
@@ -142,6 +188,9 @@ export default function ResetPasswordForm() {
           </button>
         </div>
         <PasswordStrength password={password} />
+        {touched.password && errors.password ? (
+          <p className="mt-1 text-xs text-rose-500">{errors.password}</p>
+        ) : null}
       </div>
 
       <div>
@@ -153,12 +202,29 @@ export default function ResetPasswordForm() {
           type={showPassword ? "text" : "password"}
           required
           autoComplete="new-password"
+          value={confirm}
+          onChange={(e) => {
+            const v = e.target.value;
+            setConfirm(v);
+            if (touched.confirm_password) {
+              const err = validate("confirm_password", password, v);
+              setErrors((p) => ({ ...p, confirm_password: err }));
+            }
+          }}
+          onBlur={() => {
+            setTouched((p) => ({ ...p, confirm_password: true }));
+            const err = validate("confirm_password", password, confirm);
+            setErrors((p) => ({ ...p, confirm_password: err }));
+          }}
           className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="Ulangi password"
         />
+        {touched.confirm_password && errors.confirm_password ? (
+          <p className="mt-1 text-xs text-rose-500">{errors.confirm_password}</p>
+        ) : null}
       </div>
 
-      <SubmitButton />
+      <SubmitButton disabled={disableSubmit} />
     </form>
   );
 }

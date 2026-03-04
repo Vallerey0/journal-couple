@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function CoupleSettingsPage() {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative min-h-screen w-full overflow-hidden">
       {/* BACKGROUND BLOBS */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
@@ -56,10 +56,10 @@ export default function CoupleSettingsPage() {
               Memories
             </h2>
 
-            <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 backdrop-blur-xl">
+            <div className="overflow-hidden rounded-[24px] bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
               <Link
                 href="/couple/restore"
-                className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors group"
+                className="flex items-center justify-between p-4 hover:bg-white/10 transition-colors group"
               >
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -83,9 +83,9 @@ export default function CoupleSettingsPage() {
               Actions
             </h2>
 
-            <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 backdrop-blur-xl">
+            <div className="overflow-hidden rounded-[24px] bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
               {/* Archive Action */}
-              <div className="p-4 border-b border-white/5">
+              <div className="p-4 border-b border-white/10">
                 <div className="flex items-start gap-4 mb-4">
                   <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
                     <Archive className="w-5 h-5" />
@@ -102,7 +102,7 @@ export default function CoupleSettingsPage() {
                 <form action={archiveCouple}>
                   <Button
                     variant="outline"
-                    className="w-full rounded-xl h-11 border-amber-500/20 hover:bg-amber-500/10 hover:text-amber-500"
+                    className="w-full rounded-xl h-11 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-500"
                   >
                     Archive Relationship
                   </Button>
@@ -117,7 +117,7 @@ export default function CoupleSettingsPage() {
               Danger Zone
             </h2>
 
-            <div className="overflow-hidden rounded-[24px] border border-red-500/20 bg-red-500/5 backdrop-blur-xl">
+            <div className="overflow-hidden rounded-[24px] bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/30 dark:border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]">
               <div className="p-4">
                 <div className="flex items-start gap-4 mb-4">
                   <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 shrink-0">

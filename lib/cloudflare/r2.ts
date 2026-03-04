@@ -1,4 +1,10 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} from "@aws-sdk/client-s3";
 
 const client = new S3Client({
   region: "auto",
@@ -35,4 +41,38 @@ export async function deleteFromR2(key: string) {
       Key: key,
     }),
   );
+}
+
+export async function deleteFolderFromR2(prefix: string) {
+  let continuationToken: string | undefined;
+
+  do {
+    // 1. List objects with prefix
+    const listCommand = new ListObjectsV2Command({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+
+    const listResult = await client.send(listCommand);
+
+    if (listResult.Contents && listResult.Contents.length > 0) {
+      // 2. Prepare delete objects command
+      const objectsToDelete = listResult.Contents.map((obj) => ({
+        Key: obj.Key,
+      }));
+
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: process.env.R2_BUCKET_NAME!,
+        Delete: {
+          Objects: objectsToDelete,
+        },
+      });
+
+      // 3. Delete objects
+      await client.send(deleteCommand);
+    }
+
+    continuationToken = listResult.NextContinuationToken;
+  } while (continuationToken);
 }

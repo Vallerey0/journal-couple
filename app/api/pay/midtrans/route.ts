@@ -74,9 +74,12 @@ export async function POST(req: Request) {
     }
 
     const isProd = process.env.MIDTRANS_IS_PRODUCTION === "true";
-    const snapUrl = isProd
-      ? "https://app.midtrans.com/snap/v1/transactions"
-      : "https://app.sandbox.midtrans.com/snap/v1/transactions";
+    const snapBaseUrl =
+      process.env.MIDTRANS_SNAP_URL ||
+      (isProd
+        ? "https://app.midtrans.com"
+        : "https://app.sandbox.midtrans.com");
+    const snapUrl = `${snapBaseUrl}/snap/v1/transactions`;
 
     const orderId = `JC-${intent.id.slice(0, 8)}-${Date.now()}`;
     const amount = Number(intent.final_price_idr ?? 0);

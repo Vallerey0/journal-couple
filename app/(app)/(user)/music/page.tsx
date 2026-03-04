@@ -1,17 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireActiveSubscription } from "@/lib/subscriptions/guard";
+import { guardFeatureAccess } from "@/lib/subscriptions/guard";
 import MusicClient from "./music-client";
 
 export default async function MusicPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const guard = await requireActiveSubscription();
+  const { couple, subscription: guard } = await guardFeatureAccess();
 
   // 1. Fetch User Music (Library)
   const { data: musics } = await supabase
@@ -31,6 +25,7 @@ export default async function MusicPage() {
   const { data: playlistItems } = await supabase
     .from("journal_playlists")
     .select("*")
+    .eq("couple_id", couple.id)
     .order("order_index");
 
   // Map playlist items to actual music data

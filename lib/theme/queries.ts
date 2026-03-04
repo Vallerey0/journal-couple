@@ -1,6 +1,8 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { cache } from "react";
+import { computePlanStatus } from "@/utils/plan";
 
 /* 
   Data fetcher khusus untuk Theme Preview.
@@ -9,17 +11,18 @@ import { cache } from "react";
 
 export const getCoupleForTheme = cache(async (slug: string) => {
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
 
   // 1. Sanitasi slug
   const cleanSlug = slug.trim();
 
   // 2. Query ke table couples
   //    Pastikan RLS policy "couples_public_read" sudah aktif di Supabase
+  //    NOTE: Kita hapus filter archived_at untuk handle status archived di UI
   const { data: couple, error } = await supabase
     .from("couples")
     .select("*")
     .eq("slug", cleanSlug)
-    .is("archived_at", null)
     .maybeSingle();
 
   if (error) {
@@ -28,6 +31,30 @@ export const getCoupleForTheme = cache(async (slug: string) => {
   }
 
   if (!couple) return null;
+
+  // 2.1 Check Subscription Status (via Admin Client to bypass RLS on profiles)
+  //     Hanya perlu cek jika couple tidak di-archive
+  let isExpired = false;
+
+  if (!couple.archived_at) {
+    const { data: profile } = await adminSupabase
+      .from("profiles")
+      .select("active_until, trial_ends_at, current_plan_id")
+      .eq("id", couple.user_id)
+      .maybeSingle();
+
+    if (profile) {
+      const plan = computePlanStatus({
+        active_until: profile.active_until,
+        trial_ends_at: profile.trial_ends_at,
+        current_plan_id: profile.current_plan_id,
+      });
+      isExpired = plan.view === "expired";
+    } else {
+      // Jika profile tidak ditemukan (aneh), anggap expired untuk aman
+      isExpired = true;
+    }
+  }
 
   // 3. Parallel Fetch Relations (Stories, Gallery, Playlist)
   const [storiesRes, galleryRes, playlistRes] = await Promise.all([
@@ -100,5 +127,6 @@ export const getCoupleForTheme = cache(async (slug: string) => {
     stories,
     gallery,
     playlist: tracks,
+    isExpired,
   };
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, memo } from "react";
 import { useFormStatus } from "react-dom";
 import { registerAction } from "./actions";
 
@@ -25,14 +25,18 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
     <button
       type="submit"
       disabled={isDisabled}
-      className="group mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-sm font-medium text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40 disabled:opacity-70"
+      className="group mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-sm font-medium text-white shadow-md shadow-pink-500/20 transition-transform transition-colors hover:scale-[1.02] hover:shadow-lg hover:shadow-pink-500/30 disabled:opacity-70"
     >
       {pending ? "Memproses..." : "Daftar & Kirim Email Aktivasi"}
     </button>
   );
 }
 
-function PasswordStrength({ password }: { password: string }) {
+const PasswordStrength = memo(function PasswordStrength({
+  password,
+}: {
+  password: string;
+}) {
   if (!password) return null;
 
   let score = 0;
@@ -70,7 +74,7 @@ function PasswordStrength({ password }: { password: string }) {
       </p>
     </div>
   );
-}
+});
 
 function EyeIcon({ className }: { className?: string }) {
   return (
@@ -244,7 +248,7 @@ export default function RegisterForm() {
     <form action={formAction} className="space-y-5">
       {/* alert global kecil untuk error server */}
       {serverHumanMessage ? (
-        <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 px-4 py-3 text-sm text-rose-800 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20 dark:text-rose-200">
+        <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900/30 dark:bg-rose-900/20 dark:text-rose-200">
           <div>{serverHumanMessage}</div>
 
           {emailExistsFromServer ? (
@@ -270,7 +274,7 @@ export default function RegisterForm() {
           onChange={(e) => setField("full_name", e.target.value)}
           onBlur={() => blurField("full_name")}
           required
-          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="Nama kamu"
         />
         {touched.full_name && errors.full_name ? (
@@ -289,7 +293,7 @@ export default function RegisterForm() {
           onChange={(e) => setField("email", e.target.value)}
           onBlur={blurEmail}
           required
-          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="nama@email.com"
         />
         {checkingEmail ? (
@@ -313,7 +317,7 @@ export default function RegisterForm() {
           onChange={(e) => setField("phone", e.target.value)}
           onBlur={() => blurField("phone")}
           required
-          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="08xxxxxxxxxx"
         />
         {touched.phone && errors.phone ? (
@@ -334,7 +338,7 @@ export default function RegisterForm() {
             onBlur={() => blurField("password")}
             required
             autoComplete="new-password"
-            className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 pr-12 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
+            className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 pr-12 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
             placeholder="Minimal 8 karakter"
           />
           <button
@@ -367,7 +371,7 @@ export default function RegisterForm() {
           onBlur={() => blurField("confirm_password")}
           required
           autoComplete="new-password"
-          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="Ulangi password"
         />
         {touched.confirm_password && errors.confirm_password ? (

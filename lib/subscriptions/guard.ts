@@ -1,5 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getActiveCouple, getArchivedCouples } from "@/lib/couples/queries";
 
 const GRACE_PERIOD_HOURS = 24;
 
@@ -62,4 +64,27 @@ export async function requireActiveSubscription(): Promise<SubscriptionGuardResu
   }
 
   return { allowed: false };
+}
+
+export async function guardFeatureAccess() {
+  // 1. Check Subscription
+  const sub = await requireActiveSubscription();
+  if (!sub.allowed) {
+    redirect("/subscribe");
+  }
+
+  // 2. Check Couple Status
+  const couple = await getActiveCouple();
+
+  if (!couple) {
+    // Check if archived
+    const archived = await getArchivedCouples();
+    if (archived.length > 0) {
+      redirect("/couple");
+    }
+    // No couple at all
+    redirect("/couple");
+  }
+
+  return { couple, subscription: sub };
 }

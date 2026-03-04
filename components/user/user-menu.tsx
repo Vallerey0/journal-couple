@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { LogOut, Monitor, Moon, Settings, Sun, User } from "lucide-react";
+import { Monitor, Moon, Settings, Sun, User } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -34,7 +34,7 @@ export function UserMenu({ initials = "U" }: { initials?: string }) {
         <Button
           variant="outline"
           size="icon"
-          className="h-9 w-9 rounded-xl"
+          className="h-9 w-9 rounded-xl bg-white/10 dark:bg-black/10 backdrop-blur-md border-white/20 dark:border-white/10 hover:bg-white/15"
           aria-label="User menu"
         >
           <Avatar className="h-7 w-7">
@@ -43,46 +43,70 @@ export function UserMenu({ initials = "U" }: { initials?: string }) {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Akun</DropdownMenuLabel>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 rounded-2xl border border-white/30 dark:border-white/20 bg-white/40 dark:bg-black/40 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-2"
+      >
+        <DropdownMenuLabel className="text-muted-foreground">
+          Akun
+        </DropdownMenuLabel>
 
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem
+          asChild
+          className="rounded-xl focus:bg-white/15 focus:text-foreground"
+        >
           <Link href="/couple">
             <User className="mr-2 h-4 w-4" />
             Profile Couple
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem
+          asChild
+          className="rounded-xl focus:bg-white/15 focus:text-foreground"
+        >
           <Link href="/settings">
             <Settings className="mr-2 h-4 w-4" />
             Settings
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-white/20 dark:bg-white/15" />
 
         <DropdownMenuLabel className="flex items-center">
           <ThemeIcon t={theme} />
           Tema
         </DropdownMenuLabel>
 
-        {/* ✅ no submenu: radio list */}
         <DropdownMenuRadioGroup
           value={theme ?? "system"}
           onValueChange={(v) => setTheme(v)}
         >
-          <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="system"
+            className="rounded-xl focus:bg-white/15 focus:text-foreground"
+          >
+            System
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="light"
+            className="rounded-xl focus:bg-white/15 focus:text-foreground"
+          >
+            Light
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem
+            value="dark"
+            className="rounded-xl focus:bg-white/15 focus:text-foreground"
+          >
+            Dark
+          </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
 
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="bg-white/20 dark:bg-white/15" />
 
-        {/* Logout via server action */}
         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="p-0">
           <div className="w-full px-2 py-1.5">
-            <LogoutButton label="Logout" variant="user" />
+            <LogoutButton label="Logout" variant="user" size="sm" />
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>

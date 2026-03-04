@@ -180,144 +180,210 @@ export default function MusicClient({
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* ===== STATUS BANNER ===== */}
-      <div className="rounded-xl border bg-card p-4 text-sm shadow-sm">
-        {!subscription.allowed && (
-          <p className="text-destructive font-medium">
-            Langganan berakhir. Upgrade untuk upload music.
-          </p>
-        )}
-        {isTrial && (
-          <div className="flex items-center gap-2 text-amber-600">
-            <MusicIcon className="w-4 h-4" />
-            <p className="font-medium">Trial: {userMusic.length}/1 Upload</p>
-          </div>
-        )}
-        {isPremium && (
-          <div className="flex items-center gap-2 text-emerald-600">
-            <MusicIcon className="w-4 h-4" />
-            <p className="font-medium">Premium: {userMusic.length}/3 Upload</p>
-          </div>
-        )}
-        {isGrace && (
-          <p className="text-muted-foreground">
-            Masa tenggang {subscription.remainingHours} jam — upload dikunci
-          </p>
-        )}
+    <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden pb-24">
+      {/* BACKGROUND BLOBS - Lightweight CSS Animation */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob will-change-transform" />
+        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000 will-change-transform" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000 will-change-transform" />
       </div>
 
-      {/* ===== ACTIVE PLAYLIST (SCENE) ===== */}
-      <div className="space-y-3">
-        <div className="px-1">
-          <h3 className="font-semibold text-base">Playlist Scene</h3>
-          <p className="text-xs text-muted-foreground">
-            Musik ini yang akan diputar di undangan digital kamu.
+      <div className="relative z-10 w-full px-4 sm:px-0 max-w-xl mx-auto space-y-8 pt-6">
+        {/* HEADER */}
+        <div className="text-center space-y-2">
+          <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-2xl sm:text-3xl font-bold text-transparent">
+            Music Library
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+            Atur musik latar untuk priview kalian agar lebih berkesan.
           </p>
         </div>
-        <PlaylistManager
-          items={playlist}
-          onReorder={handleReorderPlaylist}
-          onRemove={removeFromPlaylist}
-          removingId={removingId}
-        />
-      </div>
 
-      <hr className="border-border" />
-
-      {/* ===== LIBRARY TABS ===== */}
-      <div className="space-y-3">
-        <h3 className="font-semibold text-base px-1">Library Musik</h3>
-        <Tabs defaultValue="user" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="user">Upload Saya</TabsTrigger>
-            <TabsTrigger value="default">Bawaan</TabsTrigger>
-          </TabsList>
-
-          {/* USER UPLOADS */}
-          <TabsContent value="user" className="space-y-4">
-            {/* Upload Box */}
-            <div className="relative mb-4">
-              <input
-                type="file"
-                accept="audio/mpeg"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                disabled={
-                  !canUpload || uploading || userMusic.length >= maxMusic
-                }
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) upload(f);
-                  e.target.value = "";
-                }}
-              />
-              <Button
-                variant="outline"
-                className="w-full justify-center text-muted-foreground border-dashed"
-                disabled={
-                  !canUpload || uploading || userMusic.length >= maxMusic
-                }
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Mengupload...
-                  </>
-                ) : userMusic.length >= maxMusic ? (
-                  "Batas Upload Tercapai"
-                ) : (
-                  "Upload MP3 Baru"
-                )}
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              {userMusic.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-4">
-                  Belum ada musik yang diupload.
+        {/* ===== STATUS BANNER ===== */}
+        <div className="rounded-2xl border border-white/20 bg-white/40 p-5 shadow-xl shadow-purple-500/5 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/40">
+          {!subscription.allowed && (
+            <p className="text-destructive font-medium flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
+              </span>
+              Langganan berakhir. Upgrade untuk upload music.
+            </p>
+          )}
+          {isTrial && (
+            <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400">
+              <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/30">
+                <MusicIcon className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col">
+                <p className="font-bold text-sm">Mode Trial</p>
+                <p className="text-xs opacity-80">
+                  {userMusic.length}/1 Slot Upload Terpakai
                 </p>
-              ) : (
-                userMusic.map((m) => {
-                  const added = isInPlaylist(m.id, "user");
-                  return (
-                    <LibraryItem
-                      key={m.id}
-                      title={m.title}
-                      duration={m.duration_seconds}
-                      fileUrl={m.file_url}
-                      isAdded={added}
-                      isAdding={addingId === m.id}
-                      isDeleting={deletingId === m.id}
-                      onAdd={() => !added && addToPlaylist(m.id, "user")}
-                      onDelete={() => deleteUserMusic(m.id)}
-                      onRename={(name) => renameUserMusic(m.id, name)}
-                    />
-                  );
-                })
-              )}
+              </div>
             </div>
-          </TabsContent>
+          )}
+          {isPremium && (
+            <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+              <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                <MusicIcon className="w-4 h-4" />
+              </div>
+              <div className="flex flex-col">
+                <p className="font-bold text-sm">Mode Premium</p>
+                <p className="text-xs opacity-80">
+                  {userMusic.length}/3 Slot Upload Terpakai
+                </p>
+              </div>
+            </div>
+          )}
+          {isGrace && (
+            <p className="text-muted-foreground text-sm mt-2 pt-2 border-t border-dashed border-border/50">
+              Masa tenggang {subscription.remainingHours} jam — upload dikunci
+              sementara.
+            </p>
+          )}
+        </div>
 
-          {/* DEFAULT MUSIC */}
-          <TabsContent value="default" className="space-y-3">
-            {defaultMusic.map((m) => {
-              const added = isInPlaylist(m.id, "default");
-              return (
-                <LibraryItem
-                  key={m.id}
-                  title={m.title}
-                  duration={m.duration_seconds}
-                  fileUrl={m.file_url}
-                  isAdded={added}
-                  isAdding={addingId === m.id}
-                  onAdd={() => !added && addToPlaylist(m.id, "default")}
-                  isPremiumOnly={m.is_premium_only}
-                  canAccessPremium={isPremium}
-                />
-              );
-            })}
-          </TabsContent>
-        </Tabs>
+        {/* ===== ACTIVE PLAYLIST (SCENE) ===== */}
+        <div className="space-y-4">
+          <div className="px-1 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-lg text-foreground">
+                Playlist Scene
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Urutan musik yang diputar di undangan.
+              </p>
+            </div>
+          </div>
+          <PlaylistManager
+            items={playlist}
+            onReorder={handleReorderPlaylist}
+            onRemove={removeFromPlaylist}
+            removingId={removingId}
+          />
+        </div>
+
+        {/* ===== LIBRARY TABS ===== */}
+        <div className="space-y-4">
+          <h3 className="font-bold text-lg px-1 text-foreground">
+            Koleksi Musik
+          </h3>
+          <Tabs defaultValue="user" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-zinc-100/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-xl border border-white/20">
+              <TabsTrigger
+                value="user"
+                className="rounded-lg h-full data-[state=active]:bg-white data-[state=active]:text-pink-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-pink-400 transition-all duration-300"
+              >
+                Upload Saya
+              </TabsTrigger>
+              <TabsTrigger
+                value="default"
+                className="rounded-lg h-full data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-purple-400 transition-all duration-300"
+              >
+                Galeri Bawaan
+              </TabsTrigger>
+            </TabsList>
+
+            {/* USER UPLOADS */}
+            <TabsContent
+              value="user"
+              className="space-y-6 focus-visible:outline-none"
+            >
+              {/* Upload Box */}
+              <div className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl opacity-20 group-hover:opacity-40 transition duration-500 blur"></div>
+                <div className="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm transition-colors hover:bg-white/80 dark:hover:bg-zinc-900/80">
+                  <input
+                    type="file"
+                    accept="audio/mpeg"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-20"
+                    disabled={
+                      !canUpload || uploading || userMusic.length >= maxMusic
+                    }
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) upload(f);
+                      e.target.value = "";
+                    }}
+                  />
+
+                  <div className="p-3 bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/20 dark:to-purple-900/20 rounded-full mb-3 text-pink-600 dark:text-pink-400">
+                    {uploading ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : (
+                      <MusicIcon className="w-6 h-6" />
+                    )}
+                  </div>
+
+                  <p className="font-semibold text-sm mb-1">
+                    {uploading
+                      ? "Sedang Mengupload..."
+                      : userMusic.length >= maxMusic
+                        ? "Batas Upload Tercapai"
+                        : "Upload File MP3"}
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center max-w-[200px]">
+                    {userMusic.length >= maxMusic
+                      ? "Hapus musik lama untuk menambah yang baru."
+                      : "Maksimal 10MB per file. Hanya format MP3."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {userMusic.length === 0 ? (
+                  <div className="text-center py-10 opacity-50">
+                    <p className="text-sm font-medium">
+                      Belum ada musik yang diupload.
+                    </p>
+                  </div>
+                ) : (
+                  userMusic.map((m) => {
+                    const added = isInPlaylist(m.id, "user");
+                    return (
+                      <LibraryItem
+                        key={m.id}
+                        title={m.title}
+                        duration={m.duration_seconds}
+                        fileUrl={m.file_url}
+                        isAdded={added}
+                        isAdding={addingId === m.id}
+                        isDeleting={deletingId === m.id}
+                        onAdd={() => !added && addToPlaylist(m.id, "user")}
+                        onDelete={() => deleteUserMusic(m.id)}
+                        onRename={(name) => renameUserMusic(m.id, name)}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </TabsContent>
+
+            {/* DEFAULT MUSIC */}
+            <TabsContent
+              value="default"
+              className="space-y-3 focus-visible:outline-none"
+            >
+              {defaultMusic.map((m) => {
+                const added = isInPlaylist(m.id, "default");
+                return (
+                  <LibraryItem
+                    key={m.id}
+                    title={m.title}
+                    duration={m.duration_seconds}
+                    fileUrl={m.file_url}
+                    isAdded={added}
+                    isAdding={addingId === m.id}
+                    onAdd={() => !added && addToPlaylist(m.id, "default")}
+                    isPremiumOnly={m.is_premium_only}
+                    canAccessPremium={isPremium}
+                  />
+                );
+              })}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
