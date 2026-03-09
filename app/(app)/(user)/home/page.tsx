@@ -13,10 +13,16 @@ import { getActiveCouple } from "@/lib/couples/queries";
 import { SlugManager } from "@/components/user/slug-manager";
 import { Image as ImageIcon, Clock, ChevronRight, Music } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 type SP = {
   paid?: string;
   pending?: string;
   pay_error?: string;
+  // Midtrans params
+  transaction_status?: string;
+  status_code?: string;
+  order_id?: string;
 };
 
 export default async function UserHomePage({
@@ -26,9 +32,22 @@ export default async function UserHomePage({
 }) {
   const sp = await searchParams;
 
-  const paid = sp.paid === "1";
-  const pending = sp.pending === "1";
+  // Determine status from Midtrans params or internal params
+  const isMidtransSuccess =
+    sp.transaction_status === "settlement" ||
+    sp.transaction_status === "capture" ||
+    sp.status_code === "200" ||
+    sp.status_code === "201";
+
+  const isMidtransPending =
+    sp.transaction_status === "pending" || sp.status_code === "201"; // 201 can be pending
+
+  const paid = sp.paid === "1" || isMidtransSuccess;
+  const pending = sp.pending === "1" || isMidtransPending;
   const payError = sp.pay_error === "1";
+
+  // Force polling if we have any midtrans params or pending intent
+  const shouldPoll = paid || pending || sp.transaction_status || sp.order_id;
 
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -78,7 +97,7 @@ export default async function UserHomePage({
 
   const { data: pendingIntent } = await supabase
     .from("payment_intents")
-    .select("id, expires_at")
+    .select("id, expires_at, created_at")
     .eq("user_id", user.id)
     .eq("status", "pending")
     .gt("expires_at", now)
@@ -118,8 +137,8 @@ export default async function UserHomePage({
       <div className="relative z-10 space-y-6 pt-2">
         {/* Auto refresh logic */}
         <HomeAutoRefresh
-          paid={paid}
-          pending={pending}
+          paid={Boolean(shouldPoll)}
+          pending={Boolean(shouldPoll)}
           activeUntil={safeProfile.active_until}
           currentPlanId={safeProfile.current_plan_id}
         />
@@ -174,7 +193,10 @@ export default async function UserHomePage({
               </div>
 
               <div className="bg-background/40 dark:bg-black/20 rounded-2xl p-4 border border-border/50 dark:border-white/5 mb-6 flex justify-center backdrop-blur-sm">
-                <PaymentCountdown expiresAt={pendingIntent.expires_at} />
+                <PaymentCountdown
+                  expiresAt={pendingIntent.expires_at}
+                  createdAt={pendingIntent.created_at}
+                />
               </div>
 
               <div className="space-y-3">

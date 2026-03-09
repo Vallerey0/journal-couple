@@ -12,6 +12,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CompleteButton } from "./complete-button";
 
 /* ================= TYPES ================= */
 type RelationshipStage = "dating" | "engaged" | "married";
@@ -190,13 +191,7 @@ export function CoupleDashboard({ couple, locked = false }: Props) {
                 </p>
               </div>
             </div>
-            <Button
-              asChild
-              size="sm"
-              className="rounded-full bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20 h-9 px-4 text-xs font-semibold"
-            >
-              <Link href="/couple/edit#profile">Complete</Link>
-            </Button>
+            <CompleteButton />
           </div>
         </div>
       )}

@@ -35,16 +35,23 @@ export function computePlanStatus(input: Input) {
     };
   }
 
-  // TRIAL jika trial belum habis
-  const isTrial = !!trialEndsTs && trialEndsTs > now;
+  // TRIAL jika tidak ada plan tapi active_until masih hidup (atau trial_ends_at)
+  // User minta spesifik cek active_until untuk 7 hari trial
+  const isTrial =
+    !input.current_plan_id &&
+    ((!!activeUntilTs && activeUntilTs > now) ||
+      (!!trialEndsTs && trialEndsTs > now));
 
   if (isTrial) {
+    // Prioritas gunakan active_until jika ada, fallback ke trial_ends_at
+    const endParams = input.active_until ?? input.trial_ends_at!;
+
     return {
       view: "trial" as PlanView,
       title: "TRIAL",
       note: "Kamu sedang menggunakan trial",
-      untilText: `Trial sampai ${formatDateID(input.trial_ends_at!)}`,
-      remainingText: `Sisa ${formatRemainingFull(input.trial_ends_at!)}`,
+      untilText: `Trial sampai ${formatDateID(endParams)}`,
+      remainingText: `Sisa ${formatRemainingFull(endParams)}`,
       showSubscribe: true,
     };
   }

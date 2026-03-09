@@ -9,8 +9,13 @@ function decodeParam(v?: string) {
   return decodeURIComponent(v.replace(/\+/g, " "));
 }
 
-export default function ActivatePage({ searchParams }: { searchParams: SP }) {
-  const email = decodeParam(searchParams.email);
+export default async function ActivatePage({
+  searchParams,
+}: {
+  searchParams: Promise<SP>;
+}) {
+  const { email: rawEmail } = await searchParams;
+  const email = decodeParam(rawEmail);
 
   return (
     <LoginClient>

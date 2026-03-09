@@ -48,7 +48,16 @@ export default function StoryScene({
   // Calculate actual phases using props if available, otherwise default
   // Merge frame counts AND story content (title, date)
   const phases = useMemo(() => {
-    return DEFAULT_PHASES.map((phase) => {
+    // Only include phases that exist in the user's stories AND have content
+    const availablePhases = DEFAULT_PHASES.filter((phase) =>
+      stories?.some(
+        (s) =>
+          s.phase_key === phase.key &&
+          (!!s.title || !!s.story || !!s.story_date),
+      ),
+    );
+
+    return availablePhases.map((phase) => {
       // Find matching story data
       const storyData = stories?.find((s) => s.phase_key === phase.key);
 

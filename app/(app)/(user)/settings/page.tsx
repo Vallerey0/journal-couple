@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
 import { formatRemainingFull, formatDateID } from "@/utils/duration";
+import { computePlanStatus, PlanView } from "@/utils/plan";
 import { Metadata } from "next";
 import {
   User,
@@ -83,7 +84,7 @@ export default async function SettingsPage() {
   /* ===== Profile ===== */
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, current_plan_id, active_until")
+    .select("full_name, email, current_plan_id, active_until, trial_ends_at")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -117,7 +118,23 @@ export default async function SettingsPage() {
     .limit(1)
     .maybeSingle();
 
-  const isPremium = !!profile?.active_until;
+  const {
+    view,
+    title: statusTitle,
+    note: statusNote,
+    untilText,
+    remainingText,
+  } = computePlanStatus({
+    active_until: profile?.active_until || null,
+    trial_ends_at: profile?.trial_ends_at || null,
+    current_plan_id: profile?.current_plan_id || null,
+  });
+
+  const isPremium = view === "premium";
+  const isTrial = view === "trial";
+  const isActive = isPremium || isTrial;
+  const targetDate =
+    profile?.active_until ?? profile?.trial_ends_at ?? new Date();
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -172,7 +189,9 @@ export default async function SettingsPage() {
               "relative overflow-hidden rounded-[28px] border backdrop-blur-xl transition-all duration-500",
               isPremium
                 ? "border-amber-500/30 bg-amber-500/5 shadow-[0_0_40px_-10px_rgba(245,158,11,0.2)]"
-                : "border-white/10 bg-white/5",
+                : isTrial
+                  ? "border-blue-500/30 bg-blue-500/5 shadow-[0_0_40px_-10px_rgba(59,130,246,0.2)]"
+                  : "border-white/10 bg-white/5",
             )}
           >
             <div className="p-6">
@@ -181,13 +200,25 @@ export default async function SettingsPage() {
                   <p
                     className={cn(
                       "text-sm font-semibold uppercase tracking-wider mb-1",
-                      isPremium ? "text-amber-500" : "text-muted-foreground",
+                      isPremium
+                        ? "text-amber-500"
+                        : isTrial
+                          ? "text-blue-500"
+                          : "text-muted-foreground",
                     )}
                   >
-                    {isPremium ? "Premium Active" : "Free Plan"}
+                    {isPremium
+                      ? "Premium Active"
+                      : isTrial
+                        ? "Trial Active"
+                        : "Free Plan"}
                   </p>
                   <h4 className="text-2xl font-bold">
-                    {isPremium ? "Akses Penuh" : "Dasar"}
+                    {isPremium
+                      ? "Akses Penuh"
+                      : isTrial
+                        ? "Akses Trial"
+                        : "Dasar"}
                   </h4>
                 </div>
                 <div
@@ -195,10 +226,12 @@ export default async function SettingsPage() {
                     "h-10 w-10 rounded-full flex items-center justify-center shadow-lg",
                     isPremium
                       ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white"
-                      : "bg-slate-200 dark:bg-slate-800 text-slate-400",
+                      : isTrial
+                        ? "bg-gradient-to-br from-blue-400 to-cyan-500 text-white"
+                        : "bg-slate-200 dark:bg-slate-800 text-slate-400",
                   )}
                 >
-                  {isPremium ? (
+                  {isActive ? (
                     <Sparkles className="w-5 h-5" />
                   ) : (
                     <User className="w-5 h-5" />
@@ -206,33 +239,69 @@ export default async function SettingsPage() {
                 </div>
               </div>
 
-              {isPremium ? (
+              {isActive ? (
                 <div className="space-y-4">
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Sisa waktu</span>
-                      <span className="font-bold text-amber-500">
-                        {formatRemainingFull(profile.active_until)}
+                      <span
+                        className={cn(
+                          "font-bold",
+                          isPremium ? "text-amber-500" : "text-blue-500",
+                        )}
+                      >
+                        {remainingText}
                       </span>
                     </div>
-                    <div className="h-2 w-full bg-amber-500/10 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-2 w-full rounded-full overflow-hidden",
+                        isPremium ? "bg-amber-500/10" : "bg-blue-500/10",
+                      )}
+                    >
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full"
+                        className={cn(
+                          "h-full rounded-full",
+                          isPremium
+                            ? "bg-gradient-to-r from-amber-500 to-orange-500"
+                            : "bg-gradient-to-r from-blue-500 to-cyan-500",
+                        )}
                         style={{
-                          width: `${Math.min(100, Math.max(0, 100 - ((new Date(profile.active_until).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 365)) * 100))}%`,
+                          width: `${Math.min(
+                            100,
+                            Math.max(
+                              0,
+                              100 -
+                                ((new Date(targetDate).getTime() -
+                                  new Date().getTime()) /
+                                  (1000 *
+                                    60 *
+                                    60 *
+                                    24 *
+                                    (isPremium ? 365 : 7))) *
+                                  100,
+                            ),
+                          )}%`,
                         }}
                       />
                     </div>
                     <p className="text-xs text-muted-foreground text-right pt-1">
-                      Sampai {formatDateID(profile.active_until)}
+                      {untilText}
                     </p>
                   </div>
 
                   <Button
                     asChild
-                    className="w-full h-12 rounded-xl bg-white/10 hover:bg-white/20 text-foreground border border-white/10 shadow-sm"
+                    className={cn(
+                      "w-full h-12 rounded-xl text-foreground border shadow-sm",
+                      isPremium
+                        ? "bg-white/10 hover:bg-white/20 border-white/10"
+                        : "bg-blue-500 hover:bg-blue-600 text-white border-transparent",
+                    )}
                   >
-                    <Link href="/subscribe">Perpanjang Akses</Link>
+                    <Link href="/subscribe">
+                      {isPremium ? "Perpanjang Akses" : "Upgrade Premium"}
+                    </Link>
                   </Button>
                 </div>
               ) : (
@@ -293,7 +362,10 @@ export default async function SettingsPage() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 bg-slate-100 dark:bg-slate-800/50 p-2 rounded-lg">
                   <Clock className="w-4 h-4 text-indigo-500" />
                   <div className="font-mono font-medium">
-                    <PaymentCountdown expiresAt={pendingIntent.expires_at} />
+                    <PaymentCountdown
+                      expiresAt={pendingIntent.expires_at}
+                      createdAt={pendingIntent.created_at}
+                    />
                   </div>
                 </div>
 

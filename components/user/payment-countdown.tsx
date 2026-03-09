@@ -5,9 +5,10 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   expiresAt: string | null;
+  createdAt?: string | null;
 };
 
-export function PaymentCountdown({ expiresAt }: Props) {
+export function PaymentCountdown({ expiresAt, createdAt }: Props) {
   const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState(0);
 
@@ -23,14 +24,18 @@ export function PaymentCountdown({ expiresAt }: Props) {
   }, []);
 
   // ⛔ jangan render apa pun sebelum client mount
-  if (!mounted || !expiresAt) {
+  if (!mounted || !expiresAt || now === 0) {
     return (
       <p className="text-xs text-muted-foreground">Menghitung sisa waktu…</p>
     );
   }
 
   const endTime = new Date(expiresAt).getTime();
+  const startTime = createdAt
+    ? new Date(createdAt).getTime()
+    : endTime - 30 * 60 * 1000;
   const diff = endTime - now;
+  const totalDuration = Math.max(1000, endTime - startTime); // Avoid division by zero
 
   if (diff <= 0) {
     return (
@@ -40,8 +45,7 @@ export function PaymentCountdown({ expiresAt }: Props) {
     );
   }
 
-  const TOTAL = 30 * 60 * 1000; // 30 menit
-  const progress = Math.max(0, Math.min(100, (diff / TOTAL) * 100));
+  const progress = Math.max(0, Math.min(100, (diff / totalDuration) * 100));
 
   const minutes = Math.floor(diff / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
@@ -55,7 +59,7 @@ export function PaymentCountdown({ expiresAt }: Props) {
         </span>
       </p>
 
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
         <div
           className={cn(
             "h-full transition-all duration-300",

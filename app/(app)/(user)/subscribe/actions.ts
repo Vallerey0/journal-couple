@@ -110,7 +110,8 @@ async function pickBestAutoNewCustomerPromo(
     )
     .eq("is_active", true)
     .is("archived_at", null)
-    .eq("new_customer_only", true);
+    .eq("new_customer_only", true)
+    .is("code", null);
 
   const list = (promos ?? [])
     .filter((p: any) => isActiveWindow(p.start_at, p.end_at))
@@ -137,7 +138,7 @@ async function getPromoByCoupon(
   planId: string,
   userId: string,
   isNew: boolean,
-): Promise<PromoRow | null> {
+): Promise<{ promo: PromoRow | null; error?: string }> {
   const { data } = await admin
     .from("promotions")
     .select(
@@ -146,21 +147,69 @@ async function getPromoByCoupon(
     .eq("code", coupon)
     .maybeSingle();
 
-  if (!data) return null;
+  if (!data) return { promo: null, error: "Kode kupon tidak ditemukan." };
   const p = data as PromoRow;
 
-  if (!p.is_active) return null;
-  if (p.archived_at) return null;
-  if (!isActiveWindow(p.start_at, p.end_at)) return null;
-  if (p.new_customer_only && !isNew) return null;
+  if (!p.is_active) return { promo: null, error: "Kupon tidak aktif." };
+  if (p.archived_at) return { promo: null, error: "Kupon sudah diarsipkan." };
+  if (!isActiveWindow(p.start_at, p.end_at))
+    return { promo: null, error: "Kupon belum mulai atau sudah berakhir." };
+  if (p.new_customer_only && !isNew)
+    return { promo: null, error: "Kupon hanya untuk pengguna baru." };
 
   const okPlan = await promoApplicableToPlan(admin, p.id, planId);
-  if (!okPlan) return null;
+  if (!okPlan)
+    return { promo: null, error: "Kupon tidak berlaku untuk paket ini." };
 
   const okQuota = await canRedeemPromo(admin, p, userId);
-  if (!okQuota) return null;
+  if (!okQuota) return { promo: null, error: "Kuota penggunaan kupon habis." };
 
-  return p;
+  return { promo: p };
+}
+
+export async function checkCouponAction(code: string, planId: string) {
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) {
+    return { error: "Harap login terlebih dahulu." };
+  }
+
+  const userId = auth.user.id;
+  const admin = createAdminClient();
+
+  // Validate plan existence
+  const { data: plan } = await admin
+    .from("subscription_plans")
+    .select("id")
+    .eq("id", planId)
+    .maybeSingle();
+
+  if (!plan) {
+    return { error: "Plan tidak ditemukan." };
+  }
+
+  const isNew = await isNewCustomer(admin, userId);
+
+  const { promo, error } = await getPromoByCoupon(
+    admin,
+    code.toUpperCase(),
+    planId,
+    userId,
+    isNew,
+  );
+
+  if (!promo) {
+    return {
+      error: error || "Kupon tidak valid.",
+    };
+  }
+
+  return {
+    success: true,
+    discount_percent: promo.discount_percent,
+    code: promo.code,
+    message: `Kupon berhasil! Hemat ${promo.discount_percent}%`,
+  };
 }
 
 /* =========================
@@ -197,17 +246,30 @@ export async function createCheckoutIntentAction(formData: FormData) {
   /* 2️⃣ User baru? */
   const isNew = await isNewCustomer(admin, userId);
 
-  /* 3️⃣ Promo */
-  let promo: PromoRow | null = null;
-  if (coupon) {
-    promo = await getPromoByCoupon(admin, coupon, planId, userId, isNew);
-  } else if (isNew) {
-    promo = await pickBestAutoNewCustomerPromo(admin, planId, userId);
+  /* 3️⃣ Promo Logic (Stacking: Auto + Coupon) */
+  let autoPromo: PromoRow | null = null;
+  if (isNew) {
+    autoPromo = await pickBestAutoNewCustomerPromo(admin, planId, userId);
   }
 
-  const discountPercent = promo
-    ? clampInt(Number(promo.discount_percent ?? 0), 0, 100)
-    : 0;
+  let couponPromo: PromoRow | null = null;
+  if (coupon) {
+    const res = await getPromoByCoupon(admin, coupon, planId, userId, isNew);
+    if (res.error) {
+      // If coupon is invalid, redirect with error (user expects coupon to work)
+      // or we could fall back to auto-promo only, but that might be confusing.
+      // Given the UI validates it, a server error means it likely expired or quota full.
+      redirect(`/subscribe?error=${encodeURIComponent(res.error)}`);
+    }
+    couponPromo = res.promo;
+  }
+
+  // Calculate stacked discount
+  const autoPercent = autoPromo?.discount_percent ?? 0;
+  const couponPercent = couponPromo?.discount_percent ?? 0;
+
+  // Logic: Stack them, capped at 100%
+  const discountPercent = clampInt(autoPercent + couponPercent, 0, 100);
 
   const discountIdr = Math.floor((basePrice * discountPercent) / 100);
   const finalPrice = Math.max(0, basePrice - discountIdr);
@@ -221,8 +283,23 @@ export async function createCheckoutIntentAction(formData: FormData) {
     .eq("plan_id", planId)
     .eq("final_price_idr", finalPrice);
 
-  q = coupon ? q.eq("coupon_code", coupon) : q.is("coupon_code", null);
-  q = promo?.id ? q.eq("promotion_id", promo.id) : q.is("promotion_id", null);
+  // Check if intent matches our promo combo
+  // We prefer autoPromo as the primary promotion_id if it exists,
+  // so that payment_intents shows: promotion_id (Auto) + coupon_code (Coupon).
+  // If no auto promo, we use the coupon promo as the promotion_id.
+  const primaryPromoId = autoPromo?.id ?? couponPromo?.id;
+
+  if (primaryPromoId) {
+    q = q.eq("promotion_id", primaryPromoId);
+  } else {
+    q = q.is("promotion_id", null);
+  }
+
+  if (coupon) {
+    q = q.eq("coupon_code", coupon);
+  } else {
+    q = q.is("coupon_code", null);
+  }
 
   const { data: existing } = await q
     .order("created_at", { ascending: false })
@@ -248,18 +325,19 @@ export async function createCheckoutIntentAction(formData: FormData) {
     .eq("status", "pending")
     .lte("expires_at", new Date().toISOString());
 
-  /* 6️⃣ Create intent baru */
+  /* 6️⃣ Create intent baru (Tanpa Reservasi - Atomic saat Payment) */
   const EXPIRY_MINUTES = 30;
   const expiresAt = new Date(
     Date.now() + EXPIRY_MINUTES * 60 * 1000,
   ).toISOString();
 
-  const { data: intent, error } = await admin
+  /* Create intent manually (No pre-redemption) */
+  const { data: intent, error: intentError } = await admin
     .from("payment_intents")
     .insert({
       user_id: userId,
       plan_id: planId,
-      promotion_id: promo?.id ?? null,
+      promotion_id: primaryPromoId ?? null,
       coupon_code: coupon || null,
 
       base_price_idr: basePrice,
@@ -273,19 +351,13 @@ export async function createCheckoutIntentAction(formData: FormData) {
     .select("id")
     .maybeSingle();
 
-  if (error || !intent?.id) {
+  if (intentError || !intent?.id) {
+    console.error("Intent Error:", intentError);
     redirect("/subscribe?error=intent_failed");
   }
 
-  /* 7️⃣ Lock promo */
-  if (promo?.id) {
-    await admin.from("promotion_redemptions").insert({
-      promotion_id: promo.id,
-      user_id: userId,
-      plan_id: planId,
-      intent_id: intent.id,
-    });
-  }
+  // Kita TIDAK lagi melakukan insert ke promotion_redemptions di sini.
+  // Redemption akan dilakukan saat webhook payment sukses diterima.
 
   redirect(`/subscribe/pay?intent=${intent.id}`);
 }

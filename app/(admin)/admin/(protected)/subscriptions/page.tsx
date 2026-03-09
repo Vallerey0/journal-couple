@@ -11,6 +11,7 @@ import {
   archivePromotionAction,
 } from "./actions";
 import PromotionEditForm from "./PromotionEditForm";
+import PromotionCreateForm from "./PromotionCreateForm";
 
 function formatIDR(n: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -418,127 +419,17 @@ export default async function AdminSubscriptionsPage({
           </div>
 
           {view === "active" ? (
-            <form action={createPromotionAction} className="mt-4 grid gap-3">
-              <div className="grid gap-1">
-                <Label>Nama Promo</Label>
-                <Input name="name" placeholder="Early Bird 50%" required />
-              </div>
-
-              <div className="grid gap-1">
-                <Label>Deskripsi (opsional)</Label>
-                <Input
-                  name="description"
-                  placeholder="Promo 500 user pertama"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="grid gap-1">
-                  <Label>Kode Kupon (opsional)</Label>
-                  <Input name="code" placeholder="JOURNAL50" />
-                </div>
-
-                <div className="grid gap-1">
-                  <Label>Diskon (%)</Label>
-                  <Input
-                    name="discount_percent"
-                    placeholder="50"
-                    inputMode="numeric"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="grid gap-1">
-                  <Label>Mulai (start)</Label>
-                  <Input
-                    name="start_at"
-                    type="datetime-local"
-                    required
-                    defaultValue={startDefault}
-                  />
-                </div>
-
-                <div className="grid gap-1">
-                  <Label>Berakhir (end) — opsional</Label>
-                  <Input name="end_at" type="datetime-local" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm">
-                  <input
-                    name="new_customer_only"
-                    type="checkbox"
-                    defaultChecked
-                  />
-                  <span>User baru saja</span>
-                </label>
-
-                <div className="grid gap-1">
-                  <Label>Kuota (max redemptions)</Label>
-                  <Input
-                    name="max_redemptions"
-                    placeholder="500 (kosong = unlimited)"
-                    inputMode="numeric"
-                  />
-                </div>
-              </div>
-
-              {/* ✅ plan picker create (wajib) */}
-              <div className="rounded-xl border p-3">
-                <p className="text-xs text-muted-foreground">
-                  Pilih plan yang mendapatkan promo (wajib minimal 1).
-                </p>
-
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {safePlans.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Tambahkan plan dulu.
-                    </p>
-                  ) : (
-                    safePlans.map((p: any) => {
-                      const locked = lockedPlanIdSet.has(p.id);
-                      return (
-                        <label
-                          key={p.id}
-                          className={`flex items-center gap-2 text-sm ${
-                            locked ? "opacity-50" : ""
-                          }`}
-                          title={
-                            locked
-                              ? "Plan ini sudah punya promo aktif. Archive/akhiri promo itu dulu."
-                              : ""
-                          }
-                        >
-                          <input
-                            type="checkbox"
-                            name="plan_id"
-                            value={p.id}
-                            disabled={locked}
-                          />
-                          <span className="truncate">{p.name}</span>
-                        </label>
-                      );
-                    })
-                  )}
-                </div>
-
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  Plan yang sudah punya promo aktif akan dikunci agar promo
-                  tidak bertabrakan.
-                </p>
-              </div>
-
-              <Button className="w-full" type="submit">
-                Tambah Promo
-              </Button>
-
-              <p className="text-[11px] text-muted-foreground">
-                Jika promo sudah dipakai, edit pivot plan akan dikunci.
-              </p>
-            </form>
+            <PromotionCreateForm
+              plans={safePlans}
+              disabledAll={
+                safePlans.length > 0 && lockedPlanIdSet.size >= safePlans.length
+              }
+              disabledAllMessage="Semua plan sudah memiliki promo aktif."
+              disabledPlanIds={Array.from(lockedPlanIdSet)}
+              disabledPlanMessageMap={{}}
+              action={createPromotionAction}
+              startDefault={startDefault}
+            />
           ) : (
             <div className="mt-4 rounded-xl border p-3 text-sm text-muted-foreground">
               Archived promos bersifat historis (tidak dipakai lagi). Di sini

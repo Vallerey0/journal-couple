@@ -19,7 +19,8 @@ export default function ZodiacScene({
   female_birthdate,
   male_name,
   female_name,
-}: ZodiacSceneProps) {
+  hasGallery = false,
+}: ZodiacSceneProps & { hasGallery?: boolean }) {
   const [data, setData] = useState<CoupleHoroscope | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -382,6 +383,8 @@ export default function ZodiacScene({
           e.preventDefault();
           e.stopPropagation();
 
+          if (!hasGallery) return; // Prevent exit if gallery doesn't exist
+
           if (!isAutoScrolling.current) {
             isAutoScrolling.current = true;
             // Lock body scroll to prevent native scroll from bypassing the animation
@@ -519,6 +522,8 @@ export default function ZodiacScene({
           e.preventDefault();
           e.stopPropagation();
 
+          if (!hasGallery) return;
+
           if (!isAutoScrolling.current) {
             isAutoScrolling.current = true;
 
@@ -627,11 +632,12 @@ export default function ZodiacScene({
     return () => {
       window.removeEventListener("wheel", handleWheel);
       container.removeEventListener("wheel", handleWheel);
+      cardContent.removeEventListener("wheel", handleWheel);
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       container.removeEventListener("touchmove", handleTouchMove, true);
     };
-  }, [loading, data]);
+  }, [loading, data, hasGallery]); // Added hasGallery dependency
 
   if (loading) return <div className={styles.loading}>MEMBACA BINTANG...</div>;
   if (!data) return null;

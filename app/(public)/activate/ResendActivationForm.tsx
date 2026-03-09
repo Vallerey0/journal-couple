@@ -213,27 +213,18 @@ export default function ResendActivationForm({
         </div>
       ) : null}
 
-      {/* jika email tidak ada dari query -> tampilkan input */}
+      {/* jika email tidak ada dari query -> tampilkan pesan saja */}
       {!initialEmail ? (
-        <div className="mb-4">
-          <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Email pendaftaran
-          </label>
-          <input
-            type="email"
-            value={inputEmail}
-            onChange={(e) => setInputEmail(e.target.value)}
-            placeholder="nama@email.com"
-            className="h-11 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-800 outline-none backdrop-blur-sm transition-all placeholder:text-zinc-400 focus:border-pink-500/50 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-200 dark:focus:border-pink-500/50 dark:focus:ring-pink-500/10"
-          />
-        </div>
+        <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+          Email tidak ditemukan. Silakan daftar ulang atau login.
+        </p>
       ) : null}
 
       <form action={formAction}>
         <input type="hidden" name="email" value={safeEmail} />
         <SubmitButton
           disabled={disabled}
-          label={canSubmit ? label : "Masukkan email yang valid"}
+          label={canSubmit ? label : "Email tidak ditemukan"}
         />
       </form>
 

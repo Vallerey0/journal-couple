@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
+import { Check, X, Clock } from "lucide-react";
 
 /* ================= Helpers ================= */
 function formatIDR(n: number) {
@@ -220,7 +221,10 @@ export default async function BillingPage() {
                 <p className="text-xs font-medium text-muted-foreground mb-2">
                   Selesaikan pembayaran dalam:
                 </p>
-                <PaymentCountdown expiresAt={pendingIntent.expires_at} />
+                <PaymentCountdown
+                  expiresAt={pendingIntent.expires_at}
+                  createdAt={pendingIntent.created_at}
+                />
               </div>
 
               <div className="flex flex-col gap-3">
@@ -286,13 +290,19 @@ export default async function BillingPage() {
                             <div
                               className={`flex h-10 w-10 items-center justify-center rounded-full border ${
                                 isPaid
-                                  ? "bg-green-100 border-green-200 text-green-600 dark:bg-green-900/20 dark:border-green-800"
+                                  ? "bg-emerald-100 border-emerald-200 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-500"
                                   : isFailed
-                                    ? "bg-red-100 border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-800"
-                                    : "bg-orange-100 border-orange-200 text-orange-600 dark:bg-orange-900/20 dark:border-orange-800"
+                                    ? "bg-red-100 border-red-200 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-500"
+                                    : "bg-amber-100 border-amber-200 text-amber-600 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-500"
                               }`}
                             >
-                              {isPaid ? "✓" : isFailed ? "✕" : "⏱"}
+                              {isPaid ? (
+                                <Check className="w-5 h-5" />
+                              ) : isFailed ? (
+                                <X className="w-5 h-5" />
+                              ) : (
+                                <Clock className="w-5 h-5" />
+                              )}
                             </div>
                             <div>
                               <h3 className="font-bold text-foreground">
@@ -309,19 +319,30 @@ export default async function BillingPage() {
                               {formatIDR(Number(p.gross_amount))}
                             </p>
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm ${
                                 isPaid
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                  ? "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
                                   : isFailed
-                                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                    : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                                    ? "bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20"
+                                    : "bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"
                               }`}
                             >
-                              {isPaid
-                                ? "Lunas"
-                                : isFailed
-                                  ? "Gagal"
-                                  : "Expired"}
+                              {isPaid ? (
+                                <>
+                                  <Check className="w-3 h-3" />
+                                  Berhasil
+                                </>
+                              ) : isFailed ? (
+                                <>
+                                  <X className="w-3 h-3" />
+                                  Gagal
+                                </>
+                              ) : (
+                                <>
+                                  <Clock className="w-3 h-3" />
+                                  Expired
+                                </>
+                              )}
                             </span>
                           </div>
                         </div>

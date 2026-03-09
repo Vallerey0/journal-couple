@@ -3,13 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { createCheckoutIntentAction } from "./actions";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
+import SubscribeForm, { PlanWithPricing } from "./SubscribeForm";
 
-function formatIDR(n: number) {
+export function formatIDR(n: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(n);
 }
 
@@ -167,7 +169,8 @@ export default async function SubscribePage() {
     )
     .eq("is_active", true)
     .is("archived_at", null)
-    .eq("new_customer_only", true);
+    .eq("new_customer_only", true)
+    .is("code", null);
 
   const activePromos = (promos ?? [])
     .filter((p: any) => isActiveWindow(p.start_at, p.end_at))
@@ -197,6 +200,24 @@ export default async function SubscribePage() {
   for (const p of safePlans) {
     discountMap.set(p.id, await bestDiscountForPlan(p.id));
   }
+
+  const plansWithPricing: PlanWithPricing[] = safePlans.map((p: any) => {
+    const base = Number(p.price_idr ?? 0);
+    const disc = discountMap.get(p.id) ?? 0;
+    const discountAmount = Math.floor((base * disc) / 100);
+    const final = Math.max(0, base - discountAmount);
+
+    return {
+      id: p.id,
+      name: p.name,
+      duration_days: p.duration_days,
+      description: p.description,
+      base_price: base,
+      final_price: final,
+      discount_percent: disc,
+      discount_amount: discountAmount,
+    };
+  });
 
   const pendingPlan = pendingIntent
     ? Array.isArray((pendingIntent as any).subscription_plans)
@@ -308,133 +329,10 @@ export default async function SubscribePage() {
           </Card>
         ) : null}
 
-        <form action={createCheckoutIntentAction} className="space-y-6">
-          <div className="space-y-4" id="plan">
-            {safePlans.length === 0 ? (
-              <Card className="p-8 text-center border-zinc-200/50 bg-white/50 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/50">
-                <p className="text-muted-foreground">
-                  Belum ada paket tersedia saat ini.
-                </p>
-              </Card>
-            ) : (
-              safePlans.map((p: any) => {
-                const base = Number(p.price_idr ?? 0);
-                const disc = discountMap.get(p.id) ?? 0;
-                const discountAmount = Math.floor((base * disc) / 100);
-                const final = Math.max(0, base - discountAmount);
-
-                return (
-                  <label
-                    key={p.id}
-                    className="group relative flex cursor-pointer items-start gap-4 rounded-2xl border border-zinc-200/50 bg-white/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:bg-white/80 hover:shadow-lg hover:shadow-pink-500/5 hover:border-pink-500/30 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:bg-zinc-800/80"
-                  >
-                    <div className="pt-1">
-                      <input
-                        type="radio"
-                        name="plan_id"
-                        value={p.id}
-                        required
-                        className="peer h-5 w-5 border-2 border-zinc-300 text-pink-500 focus:ring-pink-500 dark:border-zinc-600"
-                      />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
-                            {p.name}
-                          </span>
-                          {disc > 0 && (
-                            <span className="rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                              HEMAT {disc}%
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs font-medium px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-muted-foreground">
-                          {p.duration_days} hari
-                        </span>
-                      </div>
-
-                      <div className="mt-2 flex items-baseline gap-2">
-                        {disc > 0 ? (
-                          <>
-                            <span className="text-2xl font-bold text-foreground">
-                              {formatIDR(final)}
-                            </span>
-                            <span className="text-sm text-muted-foreground line-through decoration-pink-500/50 decoration-2">
-                              {formatIDR(base)}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-2xl font-bold text-foreground">
-                            {formatIDR(base)}
-                          </span>
-                        )}
-                      </div>
-
-                      {p.description && (
-                        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                          {p.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Selection Ring Animation */}
-                    <div className="absolute inset-0 rounded-2xl border-2 border-transparent transition-all peer-checked:border-pink-500 pointer-events-none" />
-                  </label>
-                );
-              })
-            )}
-          </div>
-
-          <div className="relative">
-            <div
-              className="absolute inset-0 flex items-center"
-              aria-hidden="true"
-            >
-              <div className="w-full border-t border-zinc-200/50 dark:border-white/10"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-white/50 px-2 text-xs text-muted-foreground backdrop-blur-xl dark:bg-zinc-950/50 rounded-full">
-                Opsi Tambahan
-              </span>
-            </div>
-          </div>
-
-          <Card className="p-5 border-zinc-200/50 bg-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/40">
-            <label className="block text-sm font-semibold text-foreground mb-1">
-              Kode Kupon
-            </label>
-            <p className="text-xs text-muted-foreground mb-3">
-              Punya kode promo spesial? Masukkan di sini.
-            </p>
-
-            <div className="relative">
-              <input
-                name="coupon"
-                placeholder="Contoh: JOURNAL50"
-                className="w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 py-2.5 text-sm outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all dark:border-white/10 dark:bg-black/20"
-              />
-              <div className="absolute right-3 top-2.5 text-xs font-bold text-pink-500 pointer-events-none opacity-50">
-                %
-              </div>
-            </div>
-          </Card>
-
-          <div className="pt-2">
-            <Button
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white font-bold text-lg shadow-xl shadow-pink-500/20 hover:shadow-pink-500/40 hover:scale-[1.01] transition-all duration-300"
-              type="submit"
-            >
-              {pendingIntent ? "Buat Pesanan Baru" : "Lanjut ke Pembayaran →"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground mt-3 px-4">
-              {pendingIntent
-                ? "Membuat pesanan baru akan membatalkan tagihan sebelumnya secara otomatis."
-                : "Pembayaran aman & terenkripsi. Kamu bisa membatalkan kapan saja."}
-            </p>
-          </div>
-        </form>
+        <SubscribeForm
+          plans={plansWithPricing}
+          hasPendingIntent={!!pendingIntent}
+        />
       </div>
     </div>
   );

@@ -129,7 +129,6 @@ export default function RegisterForm() {
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<FieldTouched>({});
-  const [checkingEmail, setCheckingEmail] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const serverMessage = state?.message || "";
@@ -160,13 +159,28 @@ export default function RegisterForm() {
     if (name === "phone") {
       const p = normalizePhone(v);
       if (!p) return "Nomor HP wajib diisi.";
-      if (p.length < 10) return "Nomor HP tidak valid.";
+
+      // Validasi format Indonesia: 08... atau 628... atau +628...
+      if (!/^(08|628|\+628)/.test(p)) {
+        return "Nomor HP harus diawali 08 atau 628 (Indonesia).";
+      }
+
+      // Panjang digit (minimal 10 digit untuk format 08xx, bisa sampai 14)
+      const digitsOnly = p.replace(/\D/g, "");
+      if (digitsOnly.length < 10) {
+        return "Nomor HP terlalu pendek (min. 10 digit).";
+      }
+      if (digitsOnly.length > 15) {
+        return "Nomor HP terlalu panjang.";
+      }
+
       return "";
     }
 
     if (name === "password") {
       if (!v) return "Password wajib diisi.";
       if (v.length < 8) return "Minimal 8 karakter.";
+      if (v.length > 72) return "Password terlalu panjang.";
       return "";
     }
 
@@ -203,46 +217,20 @@ export default function RegisterForm() {
     setErrors((p) => ({ ...p, [name]: err }));
   }
 
-  async function checkEmailExists(email: string) {
-    setCheckingEmail(true);
-    try {
-      const res = await fetch("/api/auth/check-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!res.ok) return false;
-
-      const data = (await res.json()) as { exists?: boolean };
-      return Boolean(data.exists);
-    } catch {
-      return false;
-    } finally {
-      setCheckingEmail(false);
-    }
-  }
-
-  async function blurEmail() {
-    setTouched((p) => ({ ...p, email: true }));
-
-    // 1) validasi format dulu
-    const err = validate("email");
-    setErrors((p) => ({ ...p, email: err }));
-    if (err) return;
-
-    // 2) cek ke server apakah sudah terdaftar
-    const exists = await checkEmailExists(values.email);
-    if (exists) {
-      setErrors((p) => ({
-        ...p,
-        email: "Email sudah terdaftar. Silakan login.",
-      }));
-    }
-  }
-
   const hasAnyClientError = Object.values(errors).some(Boolean);
-  const disableSubmit = hasAnyClientError || checkingEmail;
+  const disableSubmit = hasAnyClientError;
+
+  // Gunakan onAnimationStart untuk mendeteksi autofill browser
+  // Teknik ini memanfaatkan animasi CSS bawaan browser saat autofill terjadi
+  const handleAutoFill = (
+    e: React.AnimationEvent<HTMLInputElement>,
+    fieldName: Field,
+  ) => {
+    if (e.animationName.includes("autofill")) {
+      const target = e.target as HTMLInputElement;
+      setField(fieldName, target.value);
+    }
+  };
 
   return (
     <form action={formAction} className="space-y-5">
@@ -273,6 +261,7 @@ export default function RegisterForm() {
           value={values.full_name}
           onChange={(e) => setField("full_name", e.target.value)}
           onBlur={() => blurField("full_name")}
+          onAnimationStart={(e) => handleAutoFill(e, "full_name")}
           required
           className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="Nama kamu"
@@ -291,16 +280,12 @@ export default function RegisterForm() {
           type="email"
           value={values.email}
           onChange={(e) => setField("email", e.target.value)}
-          onBlur={blurEmail}
+          onBlur={() => blurField("email")}
+          onAnimationStart={(e) => handleAutoFill(e, "email")}
           required
           className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm text-zinc-900 shadow-sm transition-colors placeholder:text-zinc-400 focus:border-pink-500 focus:bg-white/80 focus:ring-4 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:focus:border-pink-500 dark:focus:bg-white/10"
           placeholder="nama@email.com"
         />
-        {checkingEmail ? (
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Mengecek email...
-          </p>
-        ) : null}
         {touched.email && errors.email ? (
           <p className="mt-1 text-xs text-rose-500">{errors.email}</p>
         ) : null}

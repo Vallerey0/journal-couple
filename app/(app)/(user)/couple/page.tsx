@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 import { CoupleEmpty } from "./_components/couple-empty";
 import { CoupleDashboard } from "./_components/couple-dashboard";
+import { CoupleMissingPopup } from "./_components/couple-missing-popup";
 
 export default async function CouplePage() {
   const supabase = await createClient();
@@ -52,6 +53,7 @@ export default async function CouplePage() {
 
     return (
       <div className="space-y-4">
+        <CoupleMissingPopup />
         {showSubscribeBanner && <SubscribeBanner />}
         <div className="px-4">
           <CoupleEmpty hasArchivedCouple={hasArchivedCouple} />

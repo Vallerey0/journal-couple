@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CreateUserDialog } from "./create-user-dialog";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -12,6 +13,7 @@ export default async function AdminUsersPage({
 }) {
   const { q: query } = await searchParams;
   const supabase = await createClient();
+  const adminAuth = createAdminClient();
 
   let usersQuery = supabase
     .from("profiles")
@@ -30,7 +32,8 @@ export default async function AdminUsersPage({
       subscription_plans(name)
     `,
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(100);
 
   if (query) {
     usersQuery = usersQuery.or(
@@ -47,6 +50,34 @@ export default async function AdminUsersPage({
       </div>
     );
   }
+
+  // Fetch auth data for these users to check email confirmation status
+  const usersWithAuth = await Promise.all(
+    (users || []).map(async (user: any) => {
+      // Kita fetch satu per satu untuk akurasi karena listUsers bulk
+      // mungkin tidak sync urutannya jika ada filtering query
+      try {
+        const {
+          data: { user: authUser },
+          error: authError,
+        } = await adminAuth.auth.admin.getUserById(user.id);
+
+        return {
+          ...user,
+          email_confirmed_at: authUser?.email_confirmed_at || null,
+          last_sign_in_at: authUser?.last_sign_in_at || null,
+          is_confirmed: !!authUser?.email_confirmed_at,
+        };
+      } catch (e) {
+        console.error(`Failed to fetch auth user for ${user.id}`, e);
+        return {
+          ...user,
+          email_confirmed_at: null,
+          is_confirmed: false,
+        };
+      }
+    }),
+  );
 
   return (
     <div className="space-y-6">
@@ -76,6 +107,9 @@ export default async function AdminUsersPage({
                   Contact
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Activation
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                   Role
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -90,7 +124,7 @@ export default async function AdminUsersPage({
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
-              {users?.map((user: any) => (
+              {usersWithAuth?.map((user: any) => (
                 <tr
                   key={user.id}
                   className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
@@ -122,6 +156,28 @@ export default async function AdminUsersPage({
                         </span>
                       )}
                     </div>
+                  </td>
+                  <td className="p-4 align-middle">
+                    {user.is_confirmed ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full w-fit">
+                          Verified
+                        </span>
+                        {user.email_confirmed_at && (
+                          <span className="text-[10px] text-muted-foreground mt-1">
+                            {format(
+                              new Date(user.email_confirmed_at),
+                              "dd MMM",
+                              { locale: id },
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+                        Pending
+                      </span>
+                    )}
                   </td>
                   <td className="p-4 align-middle">
                     <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80 capitalize">
@@ -200,10 +256,10 @@ export default async function AdminUsersPage({
                   </td>
                 </tr>
               ))}
-              {users?.length === 0 && (
+              {usersWithAuth?.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={7}
                     className="p-4 text-center text-muted-foreground"
                   >
                     Tidak ada user ditemukan.

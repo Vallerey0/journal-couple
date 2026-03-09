@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 import { saveCouple } from "@/lib/couples/actions";
 
@@ -176,6 +177,7 @@ export function CoupleForm({ mode, couple }: Props) {
 
               <DatePicker
                 name="male_birth_date"
+                placeholder="Tanggal lahir"
                 value={
                   couple?.male_birth_date
                     ? new Date(couple.male_birth_date)
@@ -210,6 +212,7 @@ export function CoupleForm({ mode, couple }: Props) {
 
               <DatePicker
                 name="female_birth_date"
+                placeholder="Tanggal lahir"
                 value={
                   couple?.female_birth_date
                     ? new Date(couple.female_birth_date)
@@ -315,11 +318,13 @@ function DatePicker({
   onChange,
   name,
   required,
+  placeholder = "Pilih tanggal",
 }: {
   value?: Date;
   onChange?: (d?: Date) => void;
   name: string;
   required?: boolean;
+  placeholder?: string;
 }) {
   const [internalDate, setInternalDate] = useState<Date | undefined>(value);
 
@@ -339,9 +344,12 @@ function DatePicker({
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-start border-zinc-200/50 bg-white/50 text-left font-normal focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5"
+          className={cn(
+            "w-full justify-start border-zinc-200/50 bg-white/50 text-left font-normal focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5",
+            !selectedDate && "text-muted-foreground",
+          )}
         >
-          {selectedDate ? format(selectedDate, "PPP") : "Pilih tanggal"}
+          {selectedDate ? format(selectedDate, "PPP") : placeholder}
         </Button>
       </PopoverTrigger>
 

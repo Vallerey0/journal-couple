@@ -8,10 +8,16 @@ import { PaymentCountdown } from "@/components/user/payment-countdown";
 type Props = {
   intentId: string;
   expiresAt: string;
+  createdAt?: string;
   nextPath: string;
 };
 
-export function PendingPaymentCard({ intentId, expiresAt, nextPath }: Props) {
+export function PendingPaymentCard({
+  intentId,
+  expiresAt,
+  createdAt,
+  nextPath,
+}: Props) {
   return (
     <Card className="p-4 space-y-3">
       {/* Header */}
@@ -25,7 +31,7 @@ export function PendingPaymentCard({ intentId, expiresAt, nextPath }: Props) {
       </div>
 
       {/* ⏳ Countdown */}
-      <PaymentCountdown expiresAt={expiresAt} />
+      <PaymentCountdown expiresAt={expiresAt} createdAt={createdAt} />
 
       {/* CTA — mobile-first (tumpuk tiga) */}
       <div className="space-y-2">

@@ -146,9 +146,11 @@ export async function resyncPayment(intentId: string): Promise<ResyncResult> {
     // 3. Logic based on status
     if (["settlement", "capture"].includes(transactionStatus)) {
       // Run RPC
-      const { error: rpcError } = await supabase.rpc("process_paid_payment", {
+      const { error: rpcError } = await supabase.rpc("handle_payment_success", {
         p_intent_id: intentId,
         p_provider_order_id: orderId,
+        p_payment_type: "manual_resync",
+        p_payment_channel: "admin_panel",
       });
 
       if (rpcError) {

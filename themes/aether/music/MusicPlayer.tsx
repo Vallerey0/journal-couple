@@ -34,15 +34,24 @@ interface Track {
 
 interface MusicPlayerProps {
   playlist?: Track[];
+  hasZodiac?: boolean;
+  hasGallery?: boolean;
+  hasStories?: boolean;
 }
 
-export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
+export default function MusicPlayer({
+  playlist = [],
+  hasZodiac = false,
+  hasGallery = false,
+  hasStories = false,
+}: MusicPlayerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const hasMusic = playlist.length > 0;
 
   // Drag & Position State
   const isDraggingRef = useRef(false);
@@ -463,96 +472,107 @@ export default function MusicPlayer({ playlist = [] }: MusicPlayerProps) {
                     <Calendar size={14} className="text-blue-400" />
                     <span>Intro</span>
                   </button>
-                  <button
-                    onClick={() => scrollToSection("zodiac")}
-                    className="flex items-center gap-2 text-sm p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <MapPin size={14} className="text-purple-400" />
-                    <span>Zodiac</span>
-                  </button>
-                  <button
-                    onClick={() => scrollToSection("gallery")}
-                    className="flex items-center gap-2 text-sm p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <ImageIcon size={14} className="text-pink-400" />
-                    <span>Gallery</span>
-                  </button>
-                  <button
-                    onClick={() => scrollToSection("story")}
-                    className="flex items-center gap-2 text-sm p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  >
-                    <LinkIcon size={14} className="text-green-400" />
-                    <span>Story</span>
-                  </button>
+
+                  {hasZodiac && (
+                    <button
+                      onClick={() => scrollToSection("zodiac")}
+                      className="flex items-center gap-2 text-sm p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <MapPin size={14} className="text-purple-400" />
+                      <span>Zodiac</span>
+                    </button>
+                  )}
+
+                  {hasGallery && (
+                    <button
+                      onClick={() => scrollToSection("gallery")}
+                      className="flex items-center gap-2 text-sm p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <ImageIcon size={14} className="text-pink-400" />
+                      <span>Gallery</span>
+                    </button>
+                  )}
+
+                  {hasStories && (
+                    <button
+                      onClick={() => scrollToSection("story")}
+                      className="flex items-center gap-2 text-sm p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <LinkIcon size={14} className="text-green-400" />
+                      <span>Story</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Music Player Area */}
-              <div className="p-4 pt-2">
-                <div className="flex items-center gap-4 mb-4 bg-black/40 p-3 rounded-xl border border-white/5">
-                  <div className="w-12 h-12 shrink-0 flex items-center justify-center">
-                    <CassetteIcon
-                      className="w-full text-white"
-                      isPlaying={isPlaying}
-                    />
+              {/* Music Player Area - Only show if music exists */}
+              {hasMusic && (
+                <div className="p-4 pt-2">
+                  <div className="flex items-center gap-4 mb-4 bg-black/40 p-3 rounded-xl border border-white/5">
+                    <div className="w-12 h-12 shrink-0 flex items-center justify-center">
+                      <CassetteIcon
+                        className="w-full text-white"
+                        isPlaying={isPlaying}
+                      />
+                    </div>
+                    <div className="overflow-hidden">
+                      <div className="text-sm font-medium truncate">
+                        {currentTrack?.title || "No Track Selected"}
+                      </div>
+                      <div className="text-xs text-zinc-400 truncate">
+                        {currentTrack?.artist || "Unknown Artist"}
+                      </div>
+                    </div>
                   </div>
-                  <div className="overflow-hidden">
-                    <div className="text-sm font-medium truncate">
-                      {currentTrack?.title || "No Track Selected"}
+
+                  {/* Controls */}
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={toggleMute}
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
+                    >
+                      {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handlePrev}
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                        disabled={!playlist.length}
+                      >
+                        <SkipBack size={20} />
+                      </button>
+
+                      <button
+                        onClick={togglePlay}
+                        className="w-10 h-10 flex items-center justify-center bg-white text-black rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/20"
+                        disabled={!playlist.length}
+                      >
+                        {isPlaying ? (
+                          <Pause size={20} fill="currentColor" />
+                        ) : (
+                          <Play
+                            size={20}
+                            fill="currentColor"
+                            className="ml-0.5"
+                          />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleNext}
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                        disabled={!playlist.length}
+                      >
+                        <SkipForward size={20} />
+                      </button>
                     </div>
-                    <div className="text-xs text-zinc-400 truncate">
-                      {currentTrack?.artist || "Unknown Artist"}
-                    </div>
+
+                    {/* Spacer for alignment */}
+                    <div className="w-9" />
                   </div>
                 </div>
-
-                {/* Controls */}
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={toggleMute}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
-                  >
-                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handlePrev}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                      disabled={!playlist.length}
-                    >
-                      <SkipBack size={20} />
-                    </button>
-
-                    <button
-                      onClick={togglePlay}
-                      className="w-10 h-10 flex items-center justify-center bg-white text-black rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-white/20"
-                      disabled={!playlist.length}
-                    >
-                      {isPlaying ? (
-                        <Pause size={20} fill="currentColor" />
-                      ) : (
-                        <Play
-                          size={20}
-                          fill="currentColor"
-                          className="ml-0.5"
-                        />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={handleNext}
-                      className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                      disabled={!playlist.length}
-                    >
-                      <SkipForward size={20} />
-                    </button>
-                  </div>
-
-                  {/* Spacer for alignment */}
-                  <div className="w-9" />
-                </div>
-              </div>
+              )}
             </motion.div>
           </>
         )}

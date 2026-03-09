@@ -45,7 +45,13 @@ export async function requireActiveSubscription(): Promise<SubscriptionGuardResu
     return { allowed: true };
   }
 
-  // ⚠️ TRIAL
+  // ⚠️ TRIAL (7 Days or Manual Access without Plan)
+  // Check active_until if no plan
+  if (!profile.current_plan_id && activeUntilTs && activeUntilTs > now) {
+    return { allowed: true, trial: true };
+  }
+
+  // ⚠️ TRIAL (Fallback)
   if (trialEndsTs && trialEndsTs > now) {
     return { allowed: true, trial: true };
   }
@@ -80,10 +86,10 @@ export async function guardFeatureAccess() {
     // Check if archived
     const archived = await getArchivedCouples();
     if (archived.length > 0) {
-      redirect("/couple");
+      redirect("/couple?error=missing_couple");
     }
     // No couple at all
-    redirect("/couple");
+    redirect("/couple?error=missing_couple");
   }
 
   return { couple, subscription: sub };

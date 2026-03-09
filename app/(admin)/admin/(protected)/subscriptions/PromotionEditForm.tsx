@@ -37,6 +37,9 @@ export default function PromotionEditForm({
 }) {
   const { msg, show } = useCenterToast();
 
+  // Controlled code state for dynamic validation
+  const [code, setCode] = useState(promo.code ?? "");
+
   // selected plan state
   const [selected, setSelected] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
@@ -46,7 +49,7 @@ export default function PromotionEditForm({
 
   const selectedCount = useMemo(
     () => Object.values(selected).filter(Boolean).length,
-    [selected]
+    [selected],
   );
 
   const readOnly = !!promo.archived_at;
@@ -63,14 +66,16 @@ export default function PromotionEditForm({
 
     const isConflict = disabledPlanIds.includes(planId);
     const isChecked = !!selected[planId];
+    const hasCode = code.trim().length > 0;
 
     // ✅ aturan edit:
     // - kalau conflict dan user mau CHECK (isChecked=false) => blok
     // - kalau conflict tapi user mau UNCHECK (isChecked=true) => BOLEH
-    if (isConflict && !isChecked) {
+    // - kalau ada code => BOLEH override conflict
+    if (isConflict && !isChecked && !hasCode) {
       show(
         disabledPlanMessageMap[planId] ||
-          "Plan ini masih punya promo aktif lain. Akhiri/Archive promo itu dulu."
+          "Plan ini masih punya promo aktif lain. Akhiri/Archive promo itu dulu.",
       );
       return;
     }

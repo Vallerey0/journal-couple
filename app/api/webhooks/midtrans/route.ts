@@ -129,7 +129,7 @@ export async function POST(req: Request) {
     /* ================= PAID ================= */
 
     if (paid) {
-      const { error } = await admin.rpc("process_paid_payment", {
+      const { error } = await admin.rpc("handle_payment_success", {
         p_intent_id: intent.id,
         p_provider_order_id: orderId,
         p_payment_type: paymentType,

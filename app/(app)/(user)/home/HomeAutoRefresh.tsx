@@ -34,16 +34,19 @@ export default function HomeAutoRefresh({
     // jangan bikin interval dobel
     if (timerRef.current) return;
 
+    // Refresh immediately once
+    router.refresh();
+
     triesRef.current = 0;
     timerRef.current = setInterval(() => {
       triesRef.current += 1;
       router.refresh();
 
-      if (triesRef.current >= 10) {
+      if (triesRef.current >= 30) {
         if (timerRef.current) clearInterval(timerRef.current);
         timerRef.current = null;
       }
-    }, 2500);
+    }, 1000);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);

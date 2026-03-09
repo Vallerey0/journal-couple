@@ -41,7 +41,7 @@ export default function PromotionCreateForm({
   disabledAllMessage: string;
   disabledPlanIds: string[];
   disabledPlanMessageMap: Record<string, string>;
-  action: (formData: FormData) => void;
+  action: (formData: FormData) => Promise<void>;
   startDefault: string;
 }) {
   const { msg, show } = useCenterToast();
@@ -66,7 +66,7 @@ export default function PromotionCreateForm({
       Object.entries(selected)
         .filter(([, v]) => v)
         .map(([k]) => k),
-    [selected]
+    [selected],
   );
 
   const discountNum = useMemo(() => toIntSafe(discount), [discount]);
@@ -89,18 +89,20 @@ export default function PromotionCreateForm({
     selectedIds.length > 0 &&
     maxRedOk;
 
-  const canSubmit = !disabledAll && requiredOk;
+  const hasCode = code.trim().length > 0;
+  const canSubmit = (!disabledAll || hasCode) && requiredOk;
 
   function onPlanClick(planId: string) {
-    if (disabledAll) {
+    // Override: If code is present, we allow overriding the "disabled" status
+    if (disabledAll && !hasCode) {
       show(disabledAllMessage || "Tidak bisa membuat promo saat ini.");
       return;
     }
 
     const isDisabled = disabledPlanIds.includes(planId);
-    if (isDisabled) {
+    if (isDisabled && !hasCode) {
       show(
-        disabledPlanMessageMap[planId] || "Plan ini sedang tidak bisa dipilih."
+        disabledPlanMessageMap[planId] || "Plan ini sedang tidak bisa dipilih.",
       );
       return;
     }
@@ -113,7 +115,7 @@ export default function PromotionCreateForm({
       <CenterToast message={msg} />
 
       <form
-        action={(fd) => {
+        action={async (fd) => {
           // ✅ jangan submit kalau belum valid
           if (!canSubmit) return;
 
@@ -128,7 +130,17 @@ export default function PromotionCreateForm({
           if (v) fd.set("max_redemptions", v);
           else fd.set("max_redemptions", ""); // biar action treat null
 
-          action(fd);
+          try {
+            await action(fd);
+            // reset form or success message handled by revalidatePath/parent
+            setName("");
+            setDescription("");
+            setCode("");
+            setSelected({});
+            show("Promo berhasil dibuat!");
+          } catch (e: any) {
+            show(e.message || "Gagal membuat promo.");
+          }
         }}
         className="mt-4 grid gap-3"
       >
@@ -146,7 +158,7 @@ export default function PromotionCreateForm({
             placeholder="Early Bird 50%"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            disabled={disabledAll}
+            disabled={disabledAll && !hasCode}
             required
           />
         </div>
@@ -158,7 +170,7 @@ export default function PromotionCreateForm({
             placeholder="Promo 500 user pertama"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            disabled={disabledAll}
+            disabled={disabledAll && !hasCode}
           />
         </div>
 
@@ -170,7 +182,7 @@ export default function PromotionCreateForm({
               placeholder="JOURNAL50"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              disabled={disabledAll}
+              // Never disabled by disabledAll, to allow coupon override
             />
           </div>
 
@@ -182,7 +194,7 @@ export default function PromotionCreateForm({
               inputMode="numeric"
               value={discount}
               onChange={(e) => setDiscount(e.target.value)}
-              disabled={disabledAll}
+              disabled={disabledAll && !hasCode}
               required
             />
             {!discountOk ? (
@@ -201,7 +213,7 @@ export default function PromotionCreateForm({
               type="datetime-local"
               value={startAt}
               onChange={(e) => setStartAt(e.target.value)}
-              disabled={disabledAll}
+              disabled={disabledAll && !hasCode}
               required
             />
           </div>
@@ -213,7 +225,7 @@ export default function PromotionCreateForm({
               type="datetime-local"
               value={endAt}
               onChange={(e) => setEndAt(e.target.value)}
-              disabled={disabledAll}
+              disabled={disabledAll && !hasCode}
             />
           </div>
         </div>
@@ -227,7 +239,7 @@ export default function PromotionCreateForm({
             inputMode="numeric"
             value={maxRedemptions}
             onChange={(e) => setMaxRedemptions(e.target.value)}
-            disabled={disabledAll}
+            disabled={disabledAll && !hasCode}
           />
           {!maxRedOk ? (
             <p className="text-[11px] text-amber-600 dark:text-amber-400">
@@ -246,7 +258,7 @@ export default function PromotionCreateForm({
             type="checkbox"
             checked={newCustomerOnly}
             onChange={(e) => setNewCustomerOnly(e.target.checked)}
-            disabled={disabledAll}
+            disabled={disabledAll && !hasCode}
           />
           <span>User baru saja (belum pernah subscription)</span>
         </label>
@@ -265,6 +277,8 @@ export default function PromotionCreateForm({
             ) : (
               plans.map((p) => {
                 const conflictDisabled = disabledPlanIds.includes(p.id);
+                const hasCode = code.trim().length > 0;
+                const isBlocked = (disabledAll || conflictDisabled) && !hasCode;
                 const checked = !!selected[p.id];
 
                 return (
@@ -274,9 +288,7 @@ export default function PromotionCreateForm({
                     onClick={() => onPlanClick(p.id)}
                     className={
                       "flex items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm " +
-                      (disabledAll || conflictDisabled
-                        ? "opacity-50"
-                        : "hover:bg-muted")
+                      (isBlocked ? "opacity-50" : "hover:bg-muted")
                     }
                   >
                     <span
@@ -306,10 +318,11 @@ export default function PromotionCreateForm({
           Tambah Promo
         </Button>
 
-        {!disabledAll && !requiredOk ? (
+        {!canSubmit ? (
           <p className="text-[11px] text-muted-foreground text-center">
-            Lengkapi: nama, diskon 1–100, start, (kuota valid bila diisi), dan
-            pilih minimal 1 plan.
+            {disabledAll && !hasCode
+              ? "Promo global aktif. Masukkan kode kupon jika ingin membuat kupon khusus."
+              : "Lengkapi: nama, diskon 1–100, start, (kuota valid bila diisi), dan pilih minimal 1 plan."}
           </p>
         ) : null}
 

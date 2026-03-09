@@ -23,9 +23,15 @@ interface GalleryItem {
 
 interface GallerySceneProps {
   gallery?: GalleryItem[];
+  hasStories?: boolean;
+  firstStoryPhaseKey?: string;
 }
 
-export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
+export default function GalleryScene({
+  gallery = [],
+  hasStories = false,
+  firstStoryPhaseKey,
+}: GallerySceneProps) {
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   const bgRef = useRef<HTMLImageElement>(null);
@@ -53,11 +59,19 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
 
   // State
   const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
+  const [isReady, setIsReady] = useState(false); // Lazy initialization
   const [activeOverlay, setActiveOverlay] = useState<{
     rect: DOMRect;
     item: GalleryItem;
     index: number;
   } | null>(null);
+
+  // Lazy Initialization for Performance
+  useEffect(() => {
+    // Delay heavy canvas/GSAP init until component is in view or slightly delayed
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
   const orbitTweenRef = useRef<gsap.core.Tween | null>(null);
   const exitTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
@@ -306,13 +320,25 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
     }
   };
 
-  // Initialize Scene
+  // Canvas Initialization (Wrapped in isReady check)
   useEffect(() => {
+    if (!isReady) return;
+
     // Canvas
     const cleanupLight =
       canvasLightRef.current && initLightCanvas(canvasLightRef.current);
     const cleanupSmoke =
       canvasSmokeRef.current && initFogCanvas(canvasSmokeRef.current);
+
+    return () => {
+      if (cleanupLight) cleanupLight();
+      if (cleanupSmoke) cleanupSmoke();
+    };
+  }, [isReady]);
+
+  // Initialize Scene & Motion (Wrapped in isReady check)
+  useEffect(() => {
+    if (!isReady) return;
 
     // Initial Positions
     if (gallery.length > 0 && ringRef.current) {
@@ -429,6 +455,10 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
             setTimeout(() => ScrollTrigger.refresh(), 100);
           } else {
             document.body.style.overflow = "auto";
+            const intro = document.getElementById("intro");
+            if (intro) {
+              intro.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
           }
         },
       );
@@ -485,6 +515,15 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
 
     // Exit Animation to Story
     const handleExitToStory = () => {
+      // Check if Story section exists
+      const storySection = document.getElementById("story");
+      if (!storySection) {
+        // If no story section, bounce back or do nothing
+        // Or show a toast? For now, just ignore the exit attempt
+        console.warn("No story section found, cancelling exit transition");
+        return;
+      }
+
       if (isAutoScrolling.current) return;
       isAutoScrolling.current = true;
       document.body.style.overflow = "hidden"; // Lock scroll
@@ -714,12 +753,11 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
-      if (cleanupLight && typeof cleanupLight === "function") cleanupLight();
-      if (cleanupSmoke && typeof cleanupSmoke === "function") cleanupSmoke();
+      // Cleanup is now handled in separate canvas effect for lights/smoke
       timelineRef.current?.kill();
       orbitTweenRef.current?.kill();
     };
-  }, [gallery]);
+  }, [gallery, isReady]);
 
   // Handle Card Click
   const handleCardClick = (index: number) => {
@@ -1082,33 +1120,35 @@ export default function GalleryScene({ gallery = [] }: GallerySceneProps) {
         Tap anywhere to close
       </div>
 
-      {/* Transition Image for Exit */}
-      <div
-        ref={transitionImageRef}
-        className={styles.transitionImage}
-        style={{
-          display: "none",
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "300px", // Base size
-          height: "450px",
-          zIndex: 2000,
-          opacity: 0,
-        }}
-      >
-        <img
-          src="/themes/aether/story/how_we_met/001.jpg"
-          alt="Transition"
+      {/* Transition Image for Exit - Only if Story exists */}
+      {hasStories && firstStoryPhaseKey && (
+        <div
+          ref={transitionImageRef}
+          className={styles.transitionImage}
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            borderRadius: "10px",
+            display: "none",
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "300px", // Base size
+            height: "450px",
+            zIndex: 2000,
+            opacity: 0,
           }}
-        />
-      </div>
+        >
+          <img
+            src={`/themes/aether/story/${firstStoryPhaseKey}/001.jpg`}
+            alt="Transition"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "10px",
+            }}
+          />
+        </div>
+      )}
 
       {/* Detached Overlay Card */}
       {activeOverlay && (
