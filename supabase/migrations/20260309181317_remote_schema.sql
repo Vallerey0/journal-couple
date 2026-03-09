@@ -1138,7 +1138,7 @@ grant truncate on table "public"."gallery_items" to "service_role";
 
 grant update on table "public"."gallery_items" to "service_role";
 
-grant select on table "public"."journal_default_music" to "PUBLIC";
+grant select on table "public"."journal_default_music" to "public";
 
 grant delete on table "public"."journal_default_music" to "anon";
 
