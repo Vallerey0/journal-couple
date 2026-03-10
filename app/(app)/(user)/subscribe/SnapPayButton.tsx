@@ -119,7 +119,7 @@ export default function SnapPayButton({ intentId }: Props) {
 
       if (!ready) {
         setNote(
-          "Sistem pembayaran belum siap. Coba lagi sebentar atau buka halaman Midtrans.",
+          "Sistem pembayaran belum siap. Silakan refresh halaman atau buka halaman Midtrans.",
         );
         return;
       }

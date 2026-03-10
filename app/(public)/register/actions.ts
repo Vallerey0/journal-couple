@@ -44,9 +44,9 @@ function mapAuthErrorToMessage(raw: string) {
     return "EMAIL_EXISTS";
   }
 
-  // if (msg.includes("rate limit") || msg.includes("too many")) {
-  //   return "Terlalu sering. Coba lagi sebentar.";
-  // }
+  if (msg.includes("rate limit") || msg.includes("too many")) {
+    return "Terlalu sering. Coba lagi sebentar.";
+  }
 
   if (msg.includes("password")) {
     return "Password tidak memenuhi syarat.";

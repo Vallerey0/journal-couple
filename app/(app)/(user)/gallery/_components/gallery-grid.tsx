@@ -65,6 +65,7 @@ export function GalleryGrid({
   coupleId,
 }: GalleryGridProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [reorderMode, setReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
@@ -92,6 +93,42 @@ export function GalleryGrid({
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="relative pb-24">
+        <div className="sticky top-0 z-20 mb-6">
+          <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/30 p-6 text-zinc-800 shadow-xl shadow-pink-500/5 backdrop-blur-xl dark:bg-black/30 dark:text-white">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5" />
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="h-5 w-28 rounded-full bg-black/10 dark:bg-white/10" />
+                <div className="h-3 w-24 rounded-full bg-black/10 dark:bg-white/10" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-10 w-10 rounded-full bg-black/10 dark:bg-white/10" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 px-1">
+          {Array.from({ length: Math.min(initialItems.length || 6, 6) }).map(
+            (_, i) => (
+              <div
+                key={i}
+                className="aspect-[3/4] w-full rounded-3xl bg-black/10 dark:bg-white/10"
+              />
+            ),
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const count = items.length;
 
