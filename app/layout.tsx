@@ -57,6 +57,12 @@ export const metadata: Metadata = {
     siteName: "Journal Couple",
     images: [
       {
+        url: "/og",
+        width: 1200,
+        height: 630,
+        alt: "Journal Couple",
+      },
+      {
         url: "/og-image.png",
         width: 1200,
         height: 630,
@@ -70,7 +76,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Journal Couple",
     description: "Private couple journal untuk menyimpan kenangan pasangan.",
-    images: ["/og-image.png"],
+    images: ["/og"],
   },
 };
 

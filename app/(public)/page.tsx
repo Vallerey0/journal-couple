@@ -358,6 +358,17 @@ export default function Home() {
           </motion.div>
         </div>
       </section>
+
+      <footer className="mt-32 border-t border-zinc-200 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800">
+        <div className="flex justify-center gap-6">
+          <Link href="/privacy-policy">Privacy Policy</Link>
+          <Link href="/terms-of-service">Terms of Service</Link>
+        </div>
+
+        <p className="mt-4">
+          © {new Date().getFullYear()} Journal Couple. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }
