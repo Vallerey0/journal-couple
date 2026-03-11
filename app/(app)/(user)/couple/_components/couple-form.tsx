@@ -34,7 +34,9 @@ type Couple = {
   female_name: string;
   relationship_start_date: string;
   relationship_stage: "dating" | "engaged" | "married";
+  engaged_at?: string | null;
   married_at?: string | null;
+  reception_at?: string | null;
   notes?: string | null;
 
   male_nickname?: string | null;
@@ -70,8 +72,16 @@ export function CoupleForm({ mode, couple }: Props) {
       : undefined,
   );
 
+  const [engagedAt, setEngagedAt] = useState<Date | undefined>(
+    couple?.engaged_at ? new Date(couple.engaged_at) : undefined,
+  );
+
   const [marriedAt, setMarriedAt] = useState<Date | undefined>(
     couple?.married_at ? new Date(couple.married_at) : undefined,
+  );
+
+  const [receptionAt, setReceptionAt] = useState<Date | undefined>(
+    couple?.reception_at ? new Date(couple.reception_at) : undefined,
   );
 
   return (
@@ -116,7 +126,19 @@ export function CoupleForm({ mode, couple }: Props) {
             <Select
               name="relationship_stage"
               value={stage}
-              onValueChange={(v) => setStage(v as Couple["relationship_stage"])}
+              onValueChange={(v) => {
+                const next = v as Couple["relationship_stage"];
+                setStage(next);
+                if (next === "dating") {
+                  setEngagedAt(undefined);
+                  setMarriedAt(undefined);
+                  setReceptionAt(undefined);
+                }
+                if (next === "engaged") {
+                  setMarriedAt(undefined);
+                  setReceptionAt(undefined);
+                }
+              }}
             >
               <SelectTrigger className="h-11 w-full border-zinc-200/50 bg-white/50 focus:border-pink-500 focus:ring-pink-500/10 dark:border-white/10 dark:bg-white/5">
                 <SelectValue placeholder="Pilih status hubungan" />
@@ -130,16 +152,43 @@ export function CoupleForm({ mode, couple }: Props) {
             </Select>
           </Field>
 
-          {/* DATE PICKER — MARRIED */}
-          {stage === "married" && (
-            <Field label="Tanggal menikah">
+          {stage === "engaged" && (
+            <Field label="Tanggal lamaran / tunangan">
               <DatePicker
-                value={marriedAt}
-                onChange={setMarriedAt}
-                name="married_at"
+                value={engagedAt}
+                onChange={setEngagedAt}
+                name="engaged_at"
                 required
               />
             </Field>
+          )}
+
+          {/* DATE PICKER — MARRIED */}
+          {stage === "married" && (
+            <>
+              <Field label="Tanggal lamaran / tunangan (opsional)">
+                <DatePicker
+                  value={engagedAt}
+                  onChange={setEngagedAt}
+                  name="engaged_at"
+                />
+              </Field>
+              <Field label="Tanggal akad / pemberkatan">
+                <DatePicker
+                  value={marriedAt}
+                  onChange={setMarriedAt}
+                  name="married_at"
+                  required
+                />
+              </Field>
+              <Field label="Tanggal resepsi (opsional)">
+                <DatePicker
+                  value={receptionAt}
+                  onChange={setReceptionAt}
+                  name="reception_at"
+                />
+              </Field>
+            </>
           )}
 
           <Field label="Catatan hubungan">

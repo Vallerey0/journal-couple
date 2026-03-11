@@ -12,6 +12,7 @@ type SP = {
   reset?: string;
   email?: string;
   error?: string;
+  next?: string;
 };
 
 function decodeParam(v?: string) {
@@ -54,6 +55,7 @@ export default async function LoginPage({
   const email = decodeParam(sp.email);
   const errorMsgRaw = decodeParam(sp.error);
   const errorMsg = friendlyError(errorMsgRaw);
+  const next = decodeParam(sp.next);
 
   const showResend = shouldShowResend(email, unverified);
 
@@ -128,7 +130,7 @@ export default async function LoginPage({
       ) : null}
 
       <div className="mt-6">
-        <LoginForm defaultEmail={email} />
+        <LoginForm defaultEmail={email} next={next} />
       </div>
 
       <div className="mt-6 flex items-center justify-between text-sm">

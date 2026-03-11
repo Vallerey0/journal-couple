@@ -2,6 +2,7 @@
 
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireActiveSubscription } from "@/lib/subscriptions/guard";
@@ -35,7 +36,7 @@ function takeFirstWords(name: string, count = 2) {
 }
 
 async function generateUniqueCoupleSlug(
-  supabase: any,
+  supabase: SupabaseClient,
   maleName: string,
   femaleName: string,
 ) {
@@ -90,14 +91,32 @@ export async function saveCouple(formData: FormData): Promise<void> {
       | "engaged"
       | "married") || "dating";
 
+  const engaged_at =
+    relationship_stage !== "dating"
+      ? formData.get("engaged_at")?.toString() || null
+      : null;
+
   const married_at =
     relationship_stage === "married"
       ? formData.get("married_at")?.toString() || null
       : null;
 
+  const reception_at =
+    relationship_stage === "married"
+      ? formData.get("reception_at")?.toString() || null
+      : null;
+
   const notes = formData.get("notes")?.toString() || null;
 
   if (!male_name || !female_name || !relationship_start_date) {
+    return;
+  }
+
+  if (relationship_stage === "engaged" && !engaged_at) {
+    return;
+  }
+
+  if (relationship_stage === "married" && !married_at) {
     return;
   }
 
@@ -140,7 +159,9 @@ export async function saveCouple(formData: FormData): Promise<void> {
     female_name,
     relationship_start_date,
     relationship_stage,
+    engaged_at,
     married_at,
+    reception_at,
     notes,
 
     male_nickname,
@@ -318,8 +339,6 @@ export async function deleteCouple(formData: FormData): Promise<void> {
 
   const confirmText =
     formData.get("confirm_text")?.toString().trim().toUpperCase() ?? "";
-
-  const coupleId = formData.get("couple_id")?.toString();
 
   if (confirmText !== "HAPUS") return;
 

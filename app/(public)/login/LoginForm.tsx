@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction } from "./actions";
 
@@ -62,7 +62,13 @@ function SubmitButton() {
   );
 }
 
-export default function LoginForm({ defaultEmail }: { defaultEmail?: string }) {
+export default function LoginForm({
+  defaultEmail,
+  next,
+}: {
+  defaultEmail?: string;
+  next?: string;
+}) {
   const [state, formAction] = useActionState<State, FormData>(loginAction, {
     message: "",
   });
@@ -77,10 +83,6 @@ export default function LoginForm({ defaultEmail }: { defaultEmail?: string }) {
   const [showPassword, setShowPassword] = useState(false);
 
   const focusPassword = useMemo(() => Boolean(defaultEmail), [defaultEmail]);
-
-  useEffect(() => {
-    if (defaultEmail) setValues((p) => ({ ...p, email: defaultEmail }));
-  }, [defaultEmail]);
 
   function validate(name: Field, next = values): string {
     const v = (next[name] ?? "").trim();
@@ -117,6 +119,7 @@ export default function LoginForm({ defaultEmail }: { defaultEmail?: string }) {
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="next" value={next || ""} />
       {state?.message ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-200">
           {state.message}

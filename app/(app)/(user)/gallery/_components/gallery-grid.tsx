@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeftRight,
@@ -10,7 +10,6 @@ import {
   Trash2,
   X,
   Loader2,
-  ArrowRightLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -22,6 +21,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
   DragOverlay,
 } from "@dnd-kit/core";
 import {
@@ -65,7 +65,14 @@ export function GalleryGrid({
   coupleId,
 }: GalleryGridProps) {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    (onStoreChange) => {
+      const id = window.setTimeout(onStoreChange, 0);
+      return () => window.clearTimeout(id);
+    },
+    () => true,
+    () => false,
+  );
   const [items, setItems] = useState<GalleryItem[]>(initialItems);
   const [reorderMode, setReorderMode] = useState(false);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
@@ -94,9 +101,20 @@ export function GalleryGrid({
     setItems(initialItems);
   }, [initialItems]);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // DND SENSORS
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 100,
+        tolerance: 5,
+      },
+    }),
+  );
 
   if (!mounted) {
     return (
@@ -132,22 +150,7 @@ export function GalleryGrid({
 
   const count = items.length;
 
-  // DND SENSORS
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 100, // Short delay to prevent accidental drags
-        tolerance: 5,
-      },
-    }),
-  );
-
-  function handleDragStart(event: any) {
+  function handleDragStart(event: DragStartEvent) {
     const { active } = event;
     const item = items.find((i) => i.id === active.id);
     if (item) setActiveDragItem(item);
@@ -223,6 +226,7 @@ export function GalleryGrid({
       router.refresh();
     } catch (error) {
       toast.error("Terjadi kesalahan saat menghapus");
+      console.error(error);
     } finally {
       setIsDeleting(false);
     }

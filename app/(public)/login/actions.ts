@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -8,6 +9,15 @@ type State = { message?: string };
 
 function isEmailValid(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function safeNextPath(next: string | null) {
+  const n = String(next ?? "").trim();
+  if (!n) return "";
+  if (!n.startsWith("/")) return "";
+  if (n.startsWith("//")) return "";
+  if (n.startsWith("/auth/")) return "";
+  return n;
 }
 
 function addDays(date: Date, days: number) {
@@ -24,7 +34,10 @@ function getAdminClient() {
   }
 }
 
-async function ensureTrialSetup(userId: string, fallbackClient: any) {
+async function ensureTrialSetup(
+  userId: string,
+  fallbackClient: SupabaseClient,
+) {
   const admin = getAdminClient();
   const client = admin ?? fallbackClient;
 
@@ -70,6 +83,7 @@ export async function loginAction(
     .trim()
     .toLowerCase();
   const password = String(formData.get("password") || "");
+  const next = safeNextPath(String(formData.get("next") || ""));
 
   if (!email) return { message: "Email wajib diisi." };
   if (!isEmailValid(email)) return { message: "Email tidak valid." };
@@ -96,7 +110,11 @@ export async function loginAction(
       msg.includes("verify") ||
       msg.includes("verified")
     ) {
-      redirect(`/login?unverified=1&email=${encodeURIComponent(email)}`);
+      const to = new URL("/login", "http://local");
+      to.searchParams.set("unverified", "1");
+      to.searchParams.set("email", email);
+      if (next) to.searchParams.set("next", next);
+      redirect(to.pathname + to.search);
     }
 
     return { message: error.message };
@@ -113,5 +131,5 @@ export async function loginAction(
     }
   }
 
-  redirect("/home");
+  redirect(next || "/home");
 }
