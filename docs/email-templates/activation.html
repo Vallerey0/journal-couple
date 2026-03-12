@@ -3,17 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Aktivasi Akun Journal Couple</title>
+    <title>Konfirmasi Email – Journal Couple</title>
   </head>
+
   <body
     style="
       margin: 0;
       padding: 0;
-      background-color: #f3f4f6;
-      font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, sans-serif;
+      background: #f3f4f6;
+      font-family:
+        -apple-system, BlinkMacSystemFont, &quot;Helvetica Neue&quot;,
+        Helvetica, Arial, sans-serif;
     "
   >
-    <!-- Outer Wrapper with Colorful Gradient Background -->
+    <!-- Background -->
     <div
       style="
         background: linear-gradient(
@@ -26,123 +29,172 @@
         min-height: 100vh;
       "
     >
-      <!-- Main Card (Glass-like effect simulation with soft shadow and big radius) -->
+      <!-- Glow Wrapper -->
       <div
         style="
-          max-width: 520px;
+          max-width: 540px;
           margin: 0 auto;
-          background-color: #ffffff;
-          border-radius: 24px;
-          padding: 40px;
+          padding: 2px;
+          border-radius: 30px;
+          background: linear-gradient(
+            135deg,
+            rgba(236, 72, 153, 0.6),
+            rgba(147, 51, 234, 0.6),
+            rgba(236, 72, 153, 0.4)
+          );
           box-shadow:
-            0 20px 40px -10px rgba(147, 51, 234, 0.1),
-            0 10px 20px -10px rgba(236, 72, 153, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.8);
+            0 0 40px rgba(236, 72, 153, 0.25),
+            0 0 60px rgba(147, 51, 234, 0.2);
         "
       >
-        <!-- Header / Logo Area -->
-        <div style="text-align: center; margin-bottom: 32px">
-          <h1
+        <!-- Glass Card -->
+        <div
+          style="
+            background: rgba(255, 255, 255, 0.65);
+            padding: 44px;
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            box-shadow:
+              0 40px 80px rgba(147, 51, 234, 0.18),
+              0 20px 40px rgba(236, 72, 153, 0.14),
+              inset 0 2px 6px rgba(255, 255, 255, 0.9);
+            position: relative;
+            overflow: hidden;
+          "
+        >
+          <!-- Glass highlight -->
+          <div
             style="
-              margin: 0;
-              font-size: 28px;
-              font-weight: 800;
-              letter-spacing: -0.02em;
-              color: #db2777; /* Pink-600 fallback */
-              background: linear-gradient(to right, #ec4899, #9333ea);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
-              color: transparent;
-              /* Fallback for email clients that don't support text-gradient */
-              mso-text-fill-color: #db2777;
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 90px;
+              background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.65),
+                rgba(255, 255, 255, 0.25),
+                transparent
+              );
+              border-radius: 28px 28px 0 0;
             "
-          >
-            Journal Couple
-          </h1>
-        </div>
+          ></div>
 
-        <!-- Main Content -->
-        <div style="text-align: center; color: #374151">
+          <!-- Logo -->
+          <div style="text-align: center; margin-bottom: 30px">
+            <h1
+              style="
+                margin: 0;
+                font-size: 30px;
+                font-weight: 800;
+                letter-spacing: -0.02em;
+                color: #db2777;
+              "
+            >
+              Journal Couple
+            </h1>
+          </div>
+
+          <!-- Title -->
           <h2
             style="
-              margin: 0 0 16px;
+              margin: 0 0 18px;
               font-size: 20px;
               font-weight: 600;
               color: #1f2937;
+              text-align: center;
             "
           >
-            Selamat Datang! ✨
+            Konfirmasi Alamat Email Anda
           </h2>
 
+          <!-- Message -->
           <p
             style="
               margin: 0 0 24px;
               font-size: 16px;
               line-height: 1.6;
               color: #4b5563;
+              text-align: center;
             "
           >
-            Terima kasih sudah bergabung. Perjalanan cerita cinta kalian dimulai
-            di sini. Yuk, aktifkan akunmu untuk mulai membuat jurnal bersama
-            pasangan.
+            Terima kasih telah mendaftar di <strong>Journal Couple</strong>.
+            Silakan konfirmasi alamat email Anda untuk mengaktifkan akun dan
+            mulai membuat kenangan indah bersama pasangan Anda.
           </p>
 
-          <!-- Action Button (Gradient) -->
-          <div style="margin: 32px 0">
+          <!-- Button -->
+          <div style="text-align: center; margin: 34px 0">
             <a
               href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next=/login&email={{ .Email }}"
               style="
                 display: inline-block;
-                background: linear-gradient(to right, #ec4899, #9333ea);
-                color: #ffffff;
+                padding: 16px 38px;
                 font-size: 16px;
                 font-weight: 600;
                 text-decoration: none;
-                padding: 16px 32px;
-                border-radius: 9999px; /* Pill shape */
-                box-shadow: 0 10px 20px -5px rgba(236, 72, 153, 0.4);
-                transition: all 0.2s ease;
+                color: white;
+                border-radius: 999px;
+                background: linear-gradient(135deg, #ec4899, #9333ea);
+                box-shadow:
+                  0 12px 24px rgba(236, 72, 153, 0.35),
+                  0 6px 14px rgba(147, 51, 234, 0.25);
               "
             >
-              Aktifkan Akun Sekarang
+              Konfirmasi Email
             </a>
           </div>
 
-          <p style="font-size: 14px; color: #6b7280; margin-top: 32px">
-            Link ini hanya berlaku sementara demi keamanan akunmu.
-          </p>
-        </div>
-
-        <!-- Divider -->
-        <div
-          style="
-            height: 1px;
-            background: linear-gradient(
-              to right,
-              transparent,
-              #e5e7eb,
-              transparent
-            );
-            margin: 32px 0;
-          "
-        ></div>
-
-        <!-- Footer -->
-        <div style="text-align: center">
-          <p style="margin: 0; font-size: 12px; color: #9ca3af">
-            Jika kamu tidak merasa mendaftar, abaikan email ini.
-          </p>
+          <!-- Expiry Note -->
           <p
             style="
-              margin: 8px 0 0;
-              font-size: 12px;
-              color: #9ca3af;
-              font-weight: 500;
+              font-size: 14px;
+              color: #6b7280;
+              text-align: center;
+              margin: 0 0 30px;
             "
           >
-            &copy; Journal Couple
+            Untuk alasan keamanan, tautan konfirmasi ini akan kedaluwarsa dalam
+            waktu tertentu.
           </p>
+
+          <!-- Divider -->
+          <div
+            style="
+              height: 1px;
+              background: linear-gradient(
+                to right,
+                transparent,
+                #e5e7eb,
+                transparent
+              );
+              margin: 30px 0;
+            "
+          ></div>
+
+          <!-- Footer -->
+          <div style="text-align: center">
+            <p style="margin: 0; font-size: 12px; color: #9ca3af">
+              Email ini dikirim dari sistem otomatis. Mohon tidak membalas pesan
+              ini.
+            </p>
+
+            <p style="margin: 8px 0 0; font-size: 12px; color: #9ca3af">
+              Jika Anda tidak membuat akun ini, Anda dapat mengabaikan email
+              ini.
+            </p>
+
+            <p
+              style="
+                margin: 12px 0 0;
+                font-size: 12px;
+                color: #9ca3af;
+                font-weight: 500;
+              "
+            >
+              © 2026 Journal Couple
+            </p>
+          </div>
         </div>
       </div>
     </div>

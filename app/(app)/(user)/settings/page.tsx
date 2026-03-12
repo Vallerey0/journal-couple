@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
-import { formatRemainingFull, formatDateID } from "@/utils/duration";
-import { computePlanStatus, PlanView } from "@/utils/plan";
+import { formatDateID } from "@/utils/duration";
+import { computePlanStatus } from "@/utils/plan";
 import { Metadata } from "next";
 import {
   User,
@@ -36,7 +36,14 @@ function formatIDR(n: number) {
   }).format(n);
 }
 
-function joinName(row: any, fallback = "Premium") {
+type RowWithPlanName = {
+  subscription_plans?:
+    | { name?: string | null }
+    | Array<{ name?: string | null }>
+    | null;
+};
+
+function joinName(row: RowWithPlanName, fallback = "Premium") {
   const j = row?.subscription_plans;
   if (!j) return fallback;
   if (Array.isArray(j)) return j?.[0]?.name ?? fallback;
@@ -99,6 +106,7 @@ export default async function SettingsPage() {
     )
     .eq("user_id", user.id)
     .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -118,13 +126,7 @@ export default async function SettingsPage() {
     .limit(1)
     .maybeSingle();
 
-  const {
-    view,
-    title: statusTitle,
-    note: statusNote,
-    untilText,
-    remainingText,
-  } = computePlanStatus({
+  const { view, untilText, remainingText } = computePlanStatus({
     active_until: profile?.active_until || null,
     trial_ends_at: profile?.trial_ends_at || null,
     current_plan_id: profile?.current_plan_id || null,

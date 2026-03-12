@@ -39,6 +39,11 @@ export type SubscriptionPlan = {
   description: string | null;
   is_active: boolean;
   sort_order: number;
+  discount_percent?: number;
+  discount_amount_idr?: number;
+  final_price_idr?: number;
+  promotion_name?: string | null;
+  promotion_description?: string | null;
 };
 
 function formatIDR(n: number) {
@@ -95,11 +100,6 @@ export default function HomeClient({ plans, ctaHref }: Props) {
     mouseX.set(clientX / innerWidth);
     mouseY.set(clientY / innerHeight);
   }
-
-  const highlightPlanId =
-    plans.find((p) => (p.code ?? "").toLowerCase().includes("premium"))?.id ??
-    plans.find((p) => Number(p.price_idr ?? 0) > 0)?.id ??
-    null;
 
   return (
     <div
@@ -567,10 +567,11 @@ export default function HomeClient({ plans, ctaHref }: Props) {
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
             <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-              Pricing yang sederhana
+              Pilih paket yang pas
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-400">
-              Harga dan durasi paket diambil langsung dari database.
+              Mulai gratis, upgrade kapan saja. Kalau ada promo, diskon akan
+              otomatis diterapkan saat checkout.
             </p>
           </div>
 
@@ -581,23 +582,29 @@ export default function HomeClient({ plans, ctaHref }: Props) {
           ) : (
             <div className="grid gap-8 md:grid-cols-3">
               {plans.map((plan) => {
-                const highlight = highlightPlanId === plan.id;
-                const priceText =
-                  Number(plan.price_idr ?? 0) <= 0
-                    ? "Gratis"
-                    : formatIDR(Number(plan.price_idr ?? 0));
+                const base = Number(plan.price_idr ?? 0);
+                const disc = Number(plan.discount_percent ?? 0);
+                const final =
+                  disc > 0
+                    ? Number(plan.final_price_idr ?? base)
+                    : Number(plan.price_idr ?? 0);
+                const isDiscounted = base > 0 && disc > 0 && final < base;
+                const baseText = base <= 0 ? "Gratis" : formatIDR(base);
+                const finalText = final <= 0 ? "Gratis" : formatIDR(final);
+                const subText =
+                  plan.description || `Akses ${plan.duration_days} hari`;
 
                 return (
                   <div
                     key={plan.id}
                     className={cn(
                       "relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-md transition-all dark:border-white/5 dark:bg-white/5",
-                      highlight
+                      isDiscounted
                         ? "ring-1 ring-pink-500/30 shadow-lg shadow-pink-500/10"
                         : "hover:bg-white/20 hover:shadow-lg dark:hover:bg-white/10",
                     )}
                   >
-                    {highlight && (
+                    {isDiscounted && (
                       <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-pink-500 to-purple-600" />
                     )}
 
@@ -605,11 +612,30 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                       <div>
                         <h3 className="text-xl font-semibold">{plan.name}</h3>
                         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                          {plan.description || `${plan.duration_days} hari`}
+                          {subText}
                         </p>
+                        {isDiscounted && (
+                          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-pink-500/20 bg-pink-500/10 px-3 py-1 text-xs font-medium text-pink-700 dark:border-pink-400/20 dark:bg-pink-500/10 dark:text-pink-200">
+                            <span>{`Diskon ${disc}%`}</span>
+                            <span className="text-pink-700/70 dark:text-pink-200/70">
+                              {plan.promotion_description ||
+                                plan.promotion_name ||
+                                "Promo terbatas"}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold">{priceText}</div>
+                        {isDiscounted ? (
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-zinc-500 line-through dark:text-zinc-400">
+                              {baseText}
+                            </div>
+                            <div className="text-lg font-bold">{finalText}</div>
+                          </div>
+                        ) : (
+                          <div className="text-lg font-bold">{baseText}</div>
+                        )}
                         <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                           {plan.duration_days} hari
                         </div>
@@ -620,7 +646,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                       <Button
                         className={cn(
                           "h-12 w-full rounded-2xl",
-                          highlight
+                          isDiscounted
                             ? "bg-gradient-to-r from-pink-500 to-purple-600 text-white"
                             : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200",
                         )}
