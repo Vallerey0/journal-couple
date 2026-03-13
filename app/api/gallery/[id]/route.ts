@@ -2,10 +2,16 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import sharp from "sharp";
 import { createClient } from "@/lib/supabase/server";
-import { uploadToR2, deleteFromR2 } from "@/lib/cloudflare/r2";
+import { uploadToR2, deleteFromR2, getObject } from "@/lib/cloudflare/r2";
 
-const MAX_SIZE = 50 * 1024 * 1024; // 50MB (resized by sharp later)
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB (mobile-first)
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
 
 export async function PATCH(
   req: Request,
@@ -58,6 +64,7 @@ export async function PUT(
 ) {
   const params = await props.params;
   let newBasePath: string | null = null;
+  let tempKey: string | null = null;
 
   try {
     /* ================= AUTH ================= */
@@ -73,23 +80,10 @@ export async function PUT(
     /* ================= PARSE & VALIDATE ================= */
     const form = await req.formData();
     const file = form.get("file") as File | null;
+    tempKey = form.get("tempKey") as string | null;
 
-    if (!file) {
+    if (!file && !tempKey) {
       return NextResponse.json({ error: "File is required" }, { status: 400 });
-    }
-
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File too large (max 50MB)" },
-        { status: 413 },
-      );
-    }
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Only JPG, PNG, WEBP, HEIC allowed." },
-        { status: 415 },
-      );
     }
 
     /* ================= GET OLD DATA ================= */
@@ -106,8 +100,25 @@ export async function PUT(
     // Assuming image_path ends with /display.webp
     const oldBasePath = item.image_path.replace("/display.webp", "");
 
+    /* ================= PROCESS BUFFER ================= */
+    let buffer: Buffer;
+
+    if (tempKey) {
+      buffer = await getObject(tempKey);
+    } else if (file) {
+      // Legacy fallback
+      if (file.size > MAX_SIZE) {
+        return NextResponse.json({ error: "File too large" }, { status: 413 });
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return NextResponse.json({ error: "Invalid type" }, { status: 415 });
+      }
+      buffer = Buffer.from(await file.arrayBuffer());
+    } else {
+      return NextResponse.json({ error: "No file" }, { status: 400 });
+    }
+
     /* ================= PROCESS IMAGES (SHARP) ================= */
-    const buffer = Buffer.from(await file.arrayBuffer());
     const mediaId = nanoid(8);
     const userId = user.id;
 
@@ -139,6 +150,11 @@ export async function PUT(
       }),
     ]);
 
+    // Cleanup temp if exists
+    if (tempKey) {
+      await deleteFromR2(tempKey).catch(() => {});
+    }
+
     /* ================= UPDATE DB ================= */
     const newDisplayPath = `${newBasePath}/display.webp`;
 
@@ -161,10 +177,6 @@ export async function PUT(
       deleteFromR2(`${oldBasePath}/thumb.webp`),
       deleteFromR2(`${oldBasePath}/original.png`), // legacy
       deleteFromR2(`${oldBasePath}/preview.webp`), // legacy
-      // Also try original extension if possible, but we don't know it.
-      // original.png is hardcoded in legacy PUT but POST had variable ext.
-      // It's acceptable to miss random extensions if we don't know them,
-      // but covering the common ones helps.
     ]);
 
     return NextResponse.json({ success: true, image_path: newDisplayPath });
@@ -175,6 +187,9 @@ export async function PUT(
         deleteFromR2(`${newBasePath}/display.webp`),
         deleteFromR2(`${newBasePath}/thumb.webp`),
       ]);
+    }
+    if (tempKey) {
+      await deleteFromR2(tempKey).catch(() => {});
     }
 
     return NextResponse.json(

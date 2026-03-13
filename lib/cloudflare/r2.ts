@@ -4,7 +4,10 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
   DeleteObjectsCommand,
+  GetObjectCommand,
+  CopyObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const client = new S3Client({
   region: "auto",
@@ -14,6 +17,46 @@ const client = new S3Client({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
 });
+
+export async function getPresignedUploadUrl({
+  key,
+  contentType,
+  expiresIn = 3600,
+}: {
+  key: string;
+  contentType: string;
+  expiresIn?: number;
+}) {
+  const command = new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  return await getSignedUrl(client, command, { expiresIn });
+}
+
+export async function getObject(key: string) {
+  const command = new GetObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    Key: key,
+  });
+
+  const response = await client.send(command);
+  const byteArray = await response.Body?.transformToByteArray();
+  if (!byteArray) throw new Error("Could not read object body");
+  return Buffer.from(byteArray);
+}
+
+export async function copyObject(sourceKey: string, destinationKey: string) {
+  const command = new CopyObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    CopySource: `${process.env.R2_BUCKET_NAME}/${sourceKey}`,
+    Key: destinationKey,
+  });
+
+  await client.send(command);
+}
 
 export async function uploadToR2({
   key,

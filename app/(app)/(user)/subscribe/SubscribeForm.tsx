@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createCheckoutIntentAction, checkCouponAction } from "./actions";
 import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 // Define the shape of a plan with discount info pre-calculated
 export type PlanWithPricing = {
@@ -38,6 +39,7 @@ export default function SubscribeForm({
   hasPendingIntent,
 }: SubscribeFormProps) {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [couponCode, setCouponCode] = useState("");
   const [isCheckingCoupon, setIsCheckingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{
@@ -46,15 +48,27 @@ export default function SubscribeForm({
   } | null>(null);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (isPending) {
+      e.preventDefault();
+      return;
+    }
     if (!selectedPlanId) {
       e.preventDefault();
       toast.error("Pilih salah satu paket terlebih dahulu.");
       return;
     }
-    // Allow default form submission to server action
+
+    // Use transition to show loading state while server action is processing
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      await createCheckoutIntentAction(formData);
+    });
   };
 
   const handleApplyCoupon = async () => {
+    if (isCheckingCoupon) return;
+
     if (!selectedPlanId) {
       toast.error("Pilih paket terlebih dahulu sebelum menggunakan kupon.");
       return;
@@ -134,9 +148,30 @@ export default function SubscribeForm({
             return (
               <label
                 key={p.id}
-                className="group relative flex cursor-pointer items-start gap-4 rounded-2xl border border-zinc-200/50 bg-white/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:bg-white/80 hover:shadow-lg hover:shadow-pink-500/5 hover:border-pink-500/30 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:bg-zinc-800/80"
+                className={`group relative flex cursor-pointer items-start gap-4 rounded-2xl border border-zinc-200/50 bg-white/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:bg-white/80 hover:shadow-lg hover:shadow-pink-500/5 hover:border-pink-500/30 dark:border-white/10 dark:bg-zinc-900/60 dark:hover:bg-zinc-800/80 ${
+                  autoDiscount > 0 ? "ring-1 ring-pink-500/20" : ""
+                }`}
               >
-                <div className="pt-1">
+                {/* Walking Light Effect for Auto Discount */}
+                {autoDiscount > 0 && (
+                  <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
+                    <motion.div
+                      animate={{
+                        rotate: [0, 360],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                      className="absolute inset-[-200%] bg-[conic-gradient(from_0deg,transparent_0deg,transparent_280deg,#ec4899_320deg,#a855f7_360deg)] opacity-40 blur-[2px]"
+                    />
+                    {/* Inner mask to keep the light on the border only */}
+                    <div className="absolute inset-[2px] rounded-[14px] bg-white/90 dark:bg-zinc-900/90 z-10" />
+                  </div>
+                )}
+
+                <div className="relative z-20 pt-1">
                   <input
                     type="radio"
                     name="plan_id"
@@ -148,7 +183,7 @@ export default function SubscribeForm({
                   />
                 </div>
 
-                <div className="min-w-0 flex-1">
+                <div className="relative z-20 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
@@ -195,7 +230,7 @@ export default function SubscribeForm({
 
                 {/* Selection Ring Animation */}
                 <div
-                  className={`absolute inset-0 rounded-2xl border-2 transition-all pointer-events-none ${
+                  className={`absolute inset-0 rounded-2xl border-2 transition-all pointer-events-none z-30 ${
                     isSelected ? "border-pink-500" : "border-transparent"
                   }`}
                 />
@@ -230,7 +265,6 @@ export default function SubscribeForm({
               name="coupon"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value)}
-              placeholder="Contoh: JOURNAL50"
               className="w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 py-2.5 text-sm outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all dark:border-white/10 dark:bg-black/20"
             />
             <div className="absolute right-3 top-2.5 text-xs font-bold text-pink-500 pointer-events-none opacity-50">
@@ -255,10 +289,20 @@ export default function SubscribeForm({
 
       <div className="pt-2">
         <Button
-          className="w-full h-12 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white font-bold text-lg shadow-xl shadow-pink-500/20 hover:shadow-pink-500/40 hover:scale-[1.01] transition-all duration-300"
+          className="w-full h-12 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white font-bold text-lg shadow-xl shadow-pink-500/20 hover:shadow-pink-500/40 hover:scale-[1.01] transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
           type="submit"
+          disabled={isPending}
         >
-          {hasPendingIntent ? "Buat Pesanan Baru" : "Lanjut ke Pembayaran →"}
+          {isPending ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Memproses...</span>
+            </div>
+          ) : hasPendingIntent ? (
+            "Buat Pesanan Baru"
+          ) : (
+            "Lanjut ke Pembayaran →"
+          )}
         </Button>
         <p className="text-center text-xs text-muted-foreground mt-3 px-4">
           {hasPendingIntent

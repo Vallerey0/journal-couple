@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { X, Calendar as CalendarIcon } from "lucide-react";
+import { X, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -148,9 +148,16 @@ export function GalleryEditSheet({
             onClick={handleSave}
             disabled={loading}
             variant="ghost"
-            className="text-primary font-bold -mr-2"
+            className="text-primary font-bold -mr-2 disabled:opacity-70"
           >
-            {loading ? "Menyimpan..." : "Simpan"}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Menyimpan...</span>
+              </div>
+            ) : (
+              "Simpan"
+            )}
           </Button>
         </div>
 
@@ -245,8 +252,19 @@ export function GalleryEditSheet({
 
         {/* Footer (Alternative Save Button) */}
         <div className="p-4 border-t bg-background">
-          <Button onClick={handleSave} disabled={loading} className="w-full">
-            {loading ? "Menyimpan..." : "Simpan Perubahan"}
+          <Button
+            onClick={handleSave}
+            disabled={loading}
+            className="w-full rounded-xl disabled:opacity-70 disabled:cursor-not-allowed h-11"
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Menyimpan...</span>
+              </div>
+            ) : (
+              "Simpan Perubahan"
+            )}
           </Button>
         </div>
       </DrawerContent>

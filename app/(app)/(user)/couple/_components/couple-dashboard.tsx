@@ -10,6 +10,9 @@ import {
   Sparkles,
   Lock,
   Settings,
+  Gem,
+  Scroll,
+  PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CompleteButton } from "./complete-button";
@@ -35,7 +38,9 @@ type Couple = {
 
   relationship_start_date: string;
   relationship_stage: RelationshipStage;
+  engaged_at?: string | null;
   married_at?: string | null;
+  reception_at?: string | null;
 
   notes?: string | null;
   anniversary_note?: string | null;
@@ -164,6 +169,8 @@ export function CoupleDashboard({ couple, locked = false }: Props) {
           <div className="w-full max-w-xs bg-white/5 rounded-2xl p-2 border border-white/10">
             <AnniversaryCountdown
               relationship_start_date={couple.relationship_start_date}
+              engaged_at={couple.engaged_at}
+              married_at={couple.married_at}
               theme={{
                 from: "rgba(236, 72, 153, 0.2)", // pink-500
                 via: "rgba(168, 85, 247, 0.2)", // purple-500
@@ -198,48 +205,73 @@ export function CoupleDashboard({ couple, locked = false }: Props) {
 
       {/* ================= DETAILS GRID ================= */}
       <section className="grid grid-cols-1 gap-4">
-        {/* Info Card */}
-        <div className="rounded-[24px] bg-white/5 backdrop-blur-md border border-white/10 p-5 shadow-lg">
+        {/* Anniversary Milestones Card */}
+        <div className="rounded-[24px] bg-white/5 backdrop-blur-md border border-white/10 p-5 shadow-lg overflow-hidden relative group">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <CalendarDays className="w-16 h-16" />
+          </div>
+
           <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-indigo-500" />
-            Relationship Info
+            <Sparkles className="w-4 h-4 text-pink-500" />
+            Special Milestones
           </h3>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center py-2 border-b border-white/5">
-              <span className="text-sm text-muted-foreground">
-                Started Dating
-              </span>
-              <span className="text-sm font-semibold">
-                {new Date(couple.relationship_start_date).toLocaleDateString(
-                  "id-ID",
-                  { dateStyle: "long" },
-                )}
-              </span>
-            </div>
+          <div className="space-y-1">
+            <MilestoneItem
+              label="Anniversary Pacaran"
+              date={couple.relationship_start_date}
+              icon={Heart}
+              color="text-pink-500"
+            />
 
-            {couple.relationship_stage === "married" && couple.married_at && (
-              <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-sm text-muted-foreground">
-                  Married On
-                </span>
-                <span className="text-sm font-semibold">
-                  {new Date(couple.married_at).toLocaleDateString("id-ID", {
-                    dateStyle: "long",
-                  })}
-                </span>
-              </div>
-            )}
+            <MilestoneItem
+              label="Anniversary Tunangan"
+              date={couple.engaged_at}
+              icon={Gem}
+              color="text-cyan-400"
+            />
 
-            {couple.notes && (
-              <div className="pt-2">
-                <p className="text-xs text-muted-foreground mb-1">Our Note</p>
-                <p className="text-sm italic leading-relaxed text-foreground/80">
-                  "{couple.notes}"
-                </p>
-              </div>
-            )}
+            <MilestoneItem
+              label="Anniversary Pernikahan"
+              date={couple.married_at}
+              icon={Scroll}
+              color="text-amber-400"
+            />
+
+            <MilestoneItem
+              label="Hari Resepsi"
+              date={couple.reception_at}
+              icon={PartyPopper}
+              color="text-purple-400"
+            />
           </div>
+
+          {couple.anniversary_note && (
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-bold">
+                Catatan Anniversary
+              </p>
+              <p className="text-sm italic leading-relaxed text-foreground/80">
+                "{couple.anniversary_note}"
+              </p>
+            </div>
+          )}
+
+          {couple.notes && (
+            <div
+              className={cn(
+                "mt-4 pt-4 border-t border-white/5",
+                couple.anniversary_note && "mt-2 pt-2 border-t-0",
+              )}
+            >
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 font-medium">
+                Catatan Kami
+              </p>
+              <p className="text-sm italic leading-relaxed text-foreground/80">
+                "{couple.notes}"
+              </p>
+            </div>
+          )}
         </div>
 
         {/* People Cards */}
@@ -306,6 +338,46 @@ export function CoupleDashboard({ couple, locked = false }: Props) {
           </Link>
         </Button>
       </section>
+    </div>
+  );
+}
+
+/* ================= MILESTONE ITEM ================= */
+function MilestoneItem({
+  label,
+  date,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  date?: string | null;
+  icon: any;
+  color: string;
+}) {
+  if (!date) return null;
+
+  return (
+    <div className="flex items-center gap-4 py-3 border-b border-white/5 last:border-0 group/milestone transition-all hover:bg-white/5 -mx-2 px-2 rounded-xl">
+      <div
+        className={cn(
+          "p-2.5 rounded-2xl bg-white/5 transition-transform group-hover/milestone:scale-110 group-hover/milestone:rotate-3",
+          color,
+        )}
+      >
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="flex-1">
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">
+          {label}
+        </p>
+        <p className="text-sm font-semibold tracking-tight">
+          {new Date(date).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </p>
+      </div>
     </div>
   );
 }

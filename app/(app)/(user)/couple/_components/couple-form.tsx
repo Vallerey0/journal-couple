@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,7 @@ type Props = {
 /* ================= MAIN ================= */
 export function CoupleForm({ mode, couple }: Props) {
   const isEdit = mode === "edit";
+  const [isPending, startTransition] = useTransition();
 
   const [stage, setStage] = useState<Couple["relationship_stage"]>(
     couple?.relationship_stage ?? "dating",
@@ -86,14 +88,22 @@ export function CoupleForm({ mode, couple }: Props) {
 
   return (
     <Card className="border-zinc-200/50 bg-white/50 p-6 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/50">
-      <form action={saveCouple} className="space-y-8">
+      <form
+        action={(formData) => {
+          if (isPending) return;
+          startTransition(async () => {
+            await saveCouple(formData);
+          });
+        }}
+        className="space-y-8"
+      >
         {/* ================= CORE ================= */}
         <section className="space-y-4">
           <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
             Informasi Dasar
           </h2>
 
-          <Field label="Nama Pasangan 1">
+          <Field label="Nama Pasangan Pria">
             <Input
               name="male_name"
               defaultValue={couple?.male_name}
@@ -102,7 +112,7 @@ export function CoupleForm({ mode, couple }: Props) {
             />
           </Field>
 
-          <Field label="Nama Pasangan 2">
+          <Field label="Nama Pasangan Wanita">
             <Input
               name="female_name"
               defaultValue={couple?.female_name}
@@ -214,7 +224,7 @@ export function CoupleForm({ mode, couple }: Props) {
               </h2>
 
               <h3 className="text-xs font-medium text-muted-foreground">
-                Pasangan 1
+                Pasangan Pria
               </h3>
 
               <Input
@@ -249,7 +259,7 @@ export function CoupleForm({ mode, couple }: Props) {
               />
 
               <h3 className="pt-4 text-xs font-medium text-muted-foreground">
-                Pasangan 2
+                Pasangan Wanita
               </h3>
 
               <Input
@@ -320,9 +330,19 @@ export function CoupleForm({ mode, couple }: Props) {
 
         <Button
           type="submit"
-          className="group h-12 w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 font-medium text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40"
+          disabled={isPending}
+          className="group h-12 w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 font-medium text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-[1.02] hover:shadow-pink-500/40 disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          {mode === "create" ? "Simpan Cerita" : "Simpan Perubahan"}
+          {isPending ? (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Menyimpan...</span>
+            </div>
+          ) : mode === "create" ? (
+            "Simpan Cerita"
+          ) : (
+            "Simpan Perubahan"
+          )}
         </Button>
       </form>
     </Card>
@@ -376,6 +396,7 @@ function DatePicker({
   placeholder?: string;
 }) {
   const [internalDate, setInternalDate] = useState<Date | undefined>(value);
+  const [open, setOpen] = useState(false);
 
   const selectedDate = onChange ? value : internalDate;
 
@@ -385,10 +406,11 @@ function DatePicker({
     } else {
       setInternalDate(date);
     }
+    setOpen(false); // ✅ Menutup popover setelah tanggal dipilih
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -398,7 +420,7 @@ function DatePicker({
             !selectedDate && "text-muted-foreground",
           )}
         >
-          {selectedDate ? format(selectedDate, "PPP") : placeholder}
+          {selectedDate ? format(selectedDate, "dd-MM-yyyy") : placeholder}
         </Button>
       </PopoverTrigger>
 
@@ -407,6 +429,7 @@ function DatePicker({
           mode="single"
           selected={selectedDate}
           onSelect={handleSelect}
+          defaultMonth={selectedDate} // ✅ Menambahkan ini agar kalender fokus ke tanggal yang sudah dipilih
           captionLayout="dropdown" // ✅ KUNCI UX
           fromYear={1950} // sesuaikan kebutuhan
           toYear={new Date().getFullYear() + 1}

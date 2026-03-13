@@ -61,30 +61,55 @@ export function GalleryReplaceImageSheet({
     if (!file || loading) return;
     setLoading(true);
 
-    const form = new FormData();
-    form.append("file", file);
+    try {
+      // 1. Get Presigned URL
+      const urlRes = await fetch(
+        `/api/gallery/upload?contentType=${encodeURIComponent(file.type)}`,
+      );
+      const json = await urlRes.json();
 
-    const res = await fetch(`/api/gallery/${itemId}`, {
-      method: "PUT",
-      body: form,
-    });
-
-    if (!res.ok) {
-      let errorMessage = "Gagal mengganti gambar";
-      try {
-        const json = await res.json();
-        errorMessage = json.error || errorMessage;
-      } catch (e) {
-        console.error("Error parsing error response", e);
+      if (!urlRes.ok) {
+        throw new Error(json.error || "Gagal mendapatkan izin upload");
       }
-      toast.error(errorMessage);
-      setLoading(false);
-      return;
-    }
 
-    setOpen(false);
-    router.refresh();
-    setLoading(false);
+      const { uploadUrl, tempKey } = json;
+
+      // 2. Upload directly to R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!uploadRes.ok) throw new Error("Gagal mengunggah ke storage (R2)");
+
+      // 3. Finalize in Server
+      const form = new FormData();
+      form.append("tempKey", tempKey);
+
+      const res = await fetch(`/api/gallery/${itemId}`, {
+        method: "PUT",
+        body: form,
+      });
+
+      if (!res.ok) {
+        let errorMessage = "Gagal mengganti gambar";
+        try {
+          const json = await res.json();
+          errorMessage = json.error || errorMessage;
+        } catch (e) {
+          console.error("Error parsing error response", e);
+        }
+        throw new Error(errorMessage);
+      }
+
+      setOpen(false);
+      router.refresh();
+    } catch (e: any) {
+      console.error("Replace image error:", e);
+      toast.error("Gagal mengganti gambar. Pastikan koneksi internet stabil dan coba lagi.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -141,8 +166,8 @@ export function GalleryReplaceImageSheet({
                       <UploadCloud className="h-8 w-8" />
                     </div>
                     <p className="font-medium text-sm">Pilih foto baru</p>
-                    <p className="text-xs mt-1 opacity-70">
-                      Ganti dengan yang lebih baik
+                    <p className="text-[10px] mt-1 opacity-70">
+                      JPG, PNG, WebP. Maks 10MB.
                     </p>
                   </div>
                 )}

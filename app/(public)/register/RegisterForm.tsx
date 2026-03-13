@@ -131,7 +131,23 @@ export default function RegisterForm() {
   const [touched, setTouched] = useState<FieldTouched>({});
   const [showPassword, setShowPassword] = useState(false);
 
-  const serverMessage = state?.message || "";
+  const serverMessage = useMemo(() => {
+    if (!state) return "";
+    if (typeof state.message === "string") return state.message;
+    if (typeof state === "string") return state;
+    // Jika state adalah object tapi tidak punya message string,
+    // dan bukan initial state (message ""), maka ada error misterius
+    if (
+      state &&
+      typeof state === "object" &&
+      Object.keys(state).length > 0 &&
+      !state.message
+    ) {
+      return "Terjadi kesalahan teknis. Silakan coba lagi.";
+    }
+    return "";
+  }, [state]);
+
   const emailExistsFromServer = serverMessage === "EMAIL_EXISTS";
 
   const serverHumanMessage = useMemo(() => {

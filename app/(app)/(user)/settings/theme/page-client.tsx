@@ -42,11 +42,11 @@ export default function ThemeClientPage({
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden pb-24">
-      {/* BACKGROUND BLOBS - Lightweight CSS Animation */}
+      {/* BACKGROUND BLOBS - Static for performance */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob will-change-transform" />
-        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000 will-change-transform" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000 will-change-transform" />
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 blur-[100px] rounded-full" />
+        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/5 blur-[100px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/5 blur-[100px] rounded-full" />
       </div>
 
       <div className="relative z-10 w-full px-4 sm:px-6 max-w-5xl mx-auto space-y-8 pt-6">
@@ -63,7 +63,7 @@ export default function ThemeClientPage({
 
         {/* Categories */}
         <div className="flex justify-center">
-          <div className="flex gap-2 overflow-x-auto pb-2 p-1 bg-zinc-100/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-2xl border border-white/20 max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex gap-2 overflow-x-auto pb-2 p-1 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-2xl border border-white/20 max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
@@ -108,9 +108,9 @@ export default function ThemeClientPage({
 
         {/* Pro Banner */}
         {!subscription.allowed && (
-          <div className="mt-8 rounded-2xl border border-white/20 bg-gradient-to-r from-amber-500/90 to-orange-600/90 p-6 text-white shadow-xl backdrop-blur-md">
+          <div className="mt-8 rounded-2xl border border-white/20 bg-gradient-to-r from-amber-500/90 to-orange-600/90 p-6 text-white shadow-xl">
             <div className="flex items-start gap-4">
-              <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm shadow-inner">
+              <div className="rounded-full bg-white/20 p-3 shadow-inner">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
               <div className="space-y-1">

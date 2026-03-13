@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, X, Calendar as CalendarIcon } from "lucide-react";
+import { ImagePlus, X, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -55,8 +55,29 @@ export function GalleryCreateSheet({ trigger, coupleId }: Props) {
     setLoading(true);
 
     try {
+      // 1. Get Presigned URL
+      const urlRes = await fetch(
+        `/api/gallery/upload?contentType=${encodeURIComponent(file.type)}`,
+      );
+      const json = await urlRes.json();
+
+      if (!urlRes.ok) {
+        throw new Error(json.error || "Gagal mendapatkan izin upload");
+      }
+
+      const { uploadUrl, tempKey } = json;
+
+      // 2. Upload directly to R2
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!uploadRes.ok) throw new Error("Gagal mengunggah ke storage (R2)");
+
+      // 3. Finalize in Server
       const form = new FormData();
-      form.append("file", file);
+      form.append("tempKey", tempKey);
       form.append("couple_id", coupleId);
       form.append("journal_title", title);
       form.append("journal_text", text);
@@ -90,7 +111,8 @@ export function GalleryCreateSheet({ trigger, coupleId }: Props) {
       setMemoryType("");
       router.refresh();
     } catch (e: any) {
-      toast.error(e.message || "Gagal upload");
+      console.error("Upload error:", e);
+      toast.error("Gagal mengunggah momen. Pastikan koneksi internet stabil dan coba lagi.");
     } finally {
       setLoading(false);
     }
@@ -153,8 +175,8 @@ export function GalleryCreateSheet({ trigger, coupleId }: Props) {
                     <p className="font-medium text-sm">
                       Pilih foto dari galeri
                     </p>
-                    <p className="text-xs mt-1 opacity-70">
-                      Format JPG, PNG, atau WebP
+                    <p className="text-[10px] mt-1 opacity-70">
+                      JPG, PNG, WebP. Maks 10MB.
                     </p>
                   </div>
                 )}
@@ -223,7 +245,11 @@ export function GalleryCreateSheet({ trigger, coupleId }: Props) {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pilih tanggal</span>}
+                      {date ? (
+                        format(date, "dd-MM-yyyy")
+                      ) : (
+                        <span>Pilih tanggal</span>
+                      )}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
@@ -276,9 +302,16 @@ export function GalleryCreateSheet({ trigger, coupleId }: Props) {
           <Button
             onClick={submit}
             disabled={!file || loading}
-            className="w-full"
+            className="w-full h-11 rounded-xl disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? "Menyimpan..." : "Simpan"}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Menyimpan...</span>
+              </div>
+            ) : (
+              "Simpan"
+            )}
           </Button>
         </div>
       </DrawerContent>

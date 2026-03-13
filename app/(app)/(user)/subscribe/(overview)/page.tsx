@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
-import SubscribeForm, { PlanWithPricing } from "./SubscribeForm";
+import SubscribeForm, { PlanWithPricing } from "../SubscribeForm";
+
+// Client component wrapper for the cancel button logic
+import { CancelPaymentButton } from "@/app/(app)/(user)/subscribe/_components/cancel-payment-button";
 
 export function formatIDR(n: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -309,21 +311,7 @@ export default async function SubscribePage() {
                   </Link>
                 </Button>
 
-                <form action={cancelPendingIntentAction} className="w-full">
-                  <input
-                    type="hidden"
-                    name="intent_id"
-                    value={pendingIntent.id}
-                  />
-                  <input type="hidden" name="next" value="/subscribe" />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    className="w-full h-10 rounded-xl border-zinc-200 bg-white/50 hover:bg-red-50 hover:text-red-600 hover:border-red-200 dark:border-white/10 dark:bg-white/5 dark:hover:bg-red-900/20"
-                  >
-                    Batalkan & Pilih Baru
-                  </Button>
-                </form>
+                <CancelPaymentButton intentId={pendingIntent.id} />
               </div>
             </div>
           </Card>

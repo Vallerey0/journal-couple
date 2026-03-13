@@ -61,12 +61,12 @@ export default async function SettingsPage() {
       <div className="relative min-h-screen flex flex-col items-center justify-center p-6 overflow-hidden bg-background">
         {/* Background Blobs */}
         <div className="fixed inset-0 z-0 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000" />
+          <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 blur-[100px] rounded-full" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-cyan-500/5 blur-[100px] rounded-full" />
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center space-y-6 max-w-xs mx-auto">
-          <div className="w-20 h-20 rounded-full bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-xl">
+          <div className="w-20 h-20 rounded-full bg-white/10 border border-white/10 flex items-center justify-center shadow-xl">
             <User className="w-10 h-10 text-muted-foreground" />
           </div>
           <div className="space-y-2">
@@ -153,7 +153,7 @@ export default async function SettingsPage() {
 
         {/* PROFILE SECTION */}
         <section className="space-y-4">
-          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-2xl">
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/10 dark:bg-zinc-900/50 p-6 shadow-2xl">
             {/* Glow effect */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 blur-[50px] rounded-full pointer-events-none" />
 
@@ -188,12 +188,12 @@ export default async function SettingsPage() {
 
           <div
             className={cn(
-              "relative overflow-hidden rounded-[28px] border backdrop-blur-xl transition-all duration-500",
+              "relative overflow-hidden rounded-[28px] border transition-all duration-500",
               isPremium
-                ? "border-amber-500/30 bg-amber-500/5 shadow-[0_0_40px_-10px_rgba(245,158,11,0.2)]"
+                ? "border-amber-500/30 bg-amber-500/10 shadow-[0_0_40px_-10px_rgba(245,158,11,0.2)]"
                 : isTrial
-                  ? "border-blue-500/30 bg-blue-500/5 shadow-[0_0_40px_-10px_rgba(59,130,246,0.2)]"
-                  : "border-white/10 bg-white/5",
+                  ? "border-blue-500/30 bg-blue-500/10 shadow-[0_0_40px_-10px_rgba(59,130,246,0.2)]"
+                  : "border-white/10 bg-white/10 dark:bg-zinc-900/50",
             )}
           >
             <div className="p-6">
@@ -335,7 +335,7 @@ export default async function SettingsPage() {
               Menunggu Pembayaran
             </h3>
 
-            <div className="overflow-hidden rounded-[28px] border border-indigo-500/30 bg-indigo-500/5 backdrop-blur-xl relative">
+            <div className="overflow-hidden rounded-[28px] border border-indigo-500/30 bg-indigo-500/10 dark:bg-indigo-900/30 relative">
               <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500" />
               <div className="p-5">
                 <div className="flex justify-between items-start mb-4">
@@ -352,7 +352,7 @@ export default async function SettingsPage() {
                   </span>
                 </div>
 
-                <div className="bg-white/5 rounded-xl p-3 border border-white/10 mb-4 flex justify-between items-center">
+                <div className="bg-white/10 dark:bg-black/20 rounded-xl p-3 border border-white/10 mb-4 flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">
                     Total Tagihan
                   </span>
@@ -407,7 +407,7 @@ export default async function SettingsPage() {
             Menu Akun
           </h3>
 
-          <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/5 backdrop-blur-xl divide-y divide-white/5">
+          <div className="overflow-hidden rounded-[24px] border border-white/10 bg-white/10 dark:bg-zinc-900/50 divide-y divide-white/5">
             {/* Theme Settings */}
             <Link
               href="/settings/theme"

@@ -1,9 +1,15 @@
+"use client";
+
 import { deleteCouple } from "@/lib/couples/actions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTransition } from "react";
+import { Loader2 } from "lucide-react";
 
-export default async function DeleteCouplePage() {
+export default function DeleteCouplePage() {
+  const [isPending, startTransition] = useTransition();
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* BACKGROUND BLOBS */}
@@ -30,20 +36,37 @@ export default async function DeleteCouplePage() {
             ini.
           </p>
 
-          <form action={deleteCouple} className="space-y-4">
+          <form
+            action={(formData) => {
+              if (isPending) return;
+              startTransition(async () => {
+                await deleteCouple(formData);
+              });
+            }}
+            className="space-y-4"
+          >
             <Input
               name="confirm_text"
               placeholder="Ketik HAPUS"
               required
-              className="bg-white/5 border-red-500/20 focus:border-red-500/50 focus:ring-red-500/20"
+              disabled={isPending}
+              className="bg-white/5 border-red-500/20 focus:border-red-500/50 focus:ring-red-500/20 disabled:opacity-50"
             />
 
             <Button
               type="submit"
               variant="destructive"
-              className="w-full h-11 rounded-xl shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all hover:scale-[1.02]"
+              disabled={isPending}
+              className="w-full h-11 rounded-xl shadow-lg shadow-red-500/20 hover:shadow-red-500/40 transition-all hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Hapus Permanen
+              {isPending ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Menghapus...</span>
+                </div>
+              ) : (
+                "Hapus Permanen"
+              )}
             </Button>
           </form>
         </Card>

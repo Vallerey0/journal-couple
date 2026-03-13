@@ -49,6 +49,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   deleteDefaultMusicAction,
+  getMusicUploadUrlAction,
   reorderDefaultMusicAction,
   toggleDefaultMusicActiveAction,
   updateDefaultMusicAction,
@@ -353,25 +354,57 @@ export default function DraggableMusicList({
     if (!editingItem) return;
     setIsEditSaving(true);
 
-    const formData = new FormData(e.currentTarget);
-    const promise = updateDefaultMusicAction(formData);
-
-    toast.promise(promise, {
-      loading: "Updating metadata...",
-      success: "Music updated",
-      error: (err) => err.message || "Failed to update",
-    });
-
     try {
+      const formData = new FormData(e.currentTarget);
+      const file = formData.get("file") as File;
+
+      let finalFormData = formData;
+
+      // If file is provided, use direct R2 upload to bypass Vercel limits
+      if (file && file.size > 0) {
+        toast.loading("Preparing upload...");
+        const { uploadUrl, tempKey } = await getMusicUploadUrlAction();
+
+        toast.loading("Uploading new file...");
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type },
+        });
+
+        if (!uploadRes.ok) throw new Error("Gagal mengunggah file");
+
+        finalFormData = new FormData();
+        finalFormData.append("id", String(formData.get("id")));
+        finalFormData.append("title", String(formData.get("title")));
+        finalFormData.append(
+          "description",
+          String(formData.get("description") ?? ""),
+        );
+        finalFormData.append(
+          "is_premium_only",
+          formData.get("is_premium_only") === "on" ? "on" : "off",
+        );
+        finalFormData.append("tempKey", tempKey);
+      }
+
+      const promise = updateDefaultMusicAction(finalFormData);
+      toast.promise(promise, {
+        loading: "Saving changes...",
+        success: "Music updated",
+        error: (err) => err.message || "Failed to update",
+      });
+
       await promise;
       // We rely on server revalidation and the useEffect(initialItems) hook to update the list properly
       // But we can do partial optimistic update if needed.
       // Since we might change the file (and duration), it's better to wait for revalidation or just close the dialog.
       // The list will update automatically because of revalidatePath in action -> page re-renders -> initialItems updates -> useEffect updates items.
       setEditingItem(null);
-    } catch (e) {
-      // handled by toast
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update");
     } finally {
+      toast.dismiss(); // Clean up any hanging loading toasts
       setIsEditSaving(false);
     }
   };

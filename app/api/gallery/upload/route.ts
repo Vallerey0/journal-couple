@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import sharp from "sharp";
-import { uploadToR2, deleteFromR2 } from "@/lib/cloudflare/r2";
+import {
+  uploadToR2,
+  deleteFromR2,
+  getPresignedUploadUrl,
+  getObject,
+} from "@/lib/cloudflare/r2";
 import { createClient } from "@/lib/supabase/server";
 
-const MAX_SIZE = 50 * 1024 * 1024; // 50MB (resized by sharp later)
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB (reasonable for mobile-first)
 const ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",
@@ -13,8 +18,45 @@ const ALLOWED_TYPES = [
   "image/heif",
 ];
 
+/* =====================================================
+   GET — get presigned upload url
+===================================================== */
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const contentType = searchParams.get("contentType") || "image/jpeg";
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const fileId = nanoid(12);
+    const tempKey = `temp/users/${user.id}/gallery/${fileId}`;
+
+    const uploadUrl = await getPresignedUploadUrl({
+      key: tempKey,
+      contentType: contentType, // Use exact content type from client
+      expiresIn: 600,
+    });
+
+    return NextResponse.json({ uploadUrl, tempKey });
+  } catch (err: any) {
+    console.error("GET Presigned URL Error:", err);
+    return NextResponse.json(
+      { error: "Gagal mendapatkan izin upload storage" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function POST(req: Request) {
   let basePath: string | null = null;
+  let tempKey: string | null = null;
 
   try {
     /* =====================================================
@@ -22,6 +64,7 @@ export async function POST(req: Request) {
        ===================================================== */
     const form = await req.formData();
     const file = form.get("file") as File | null;
+    tempKey = form.get("tempKey") as string | null;
     const coupleId = form.get("couple_id") as string | null;
     const journalTitle = form.get("journal_title") as string | null;
     const journalText = form.get("journal_text") as string | null;
@@ -29,24 +72,8 @@ export async function POST(req: Request) {
     const isFavorite = form.get("is_favorite") === "true";
     const memoryType = form.get("memory_type") as string | null;
 
-    if (!file || !coupleId) {
+    if ((!file && !tempKey) || !coupleId) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-    }
-
-    // 1. Validate File Size
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json(
-        { error: "File too large (max 50MB)" },
-        { status: 413 },
-      );
-    }
-
-    // 2. Validate File Type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Only JPG, PNG, WEBP, HEIC allowed." },
-        { status: 415 },
-      );
     }
 
     /* =====================================================
@@ -62,9 +89,28 @@ export async function POST(req: Request) {
     }
 
     /* =====================================================
+       PROCESS BUFFER
+       ===================================================== */
+    let buffer: Buffer;
+
+    if (tempKey) {
+      buffer = await getObject(tempKey);
+    } else if (file) {
+      // Legacy fallback
+      if (file.size > MAX_SIZE) {
+        return NextResponse.json({ error: "File too large" }, { status: 413 });
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        return NextResponse.json({ error: "Invalid type" }, { status: 415 });
+      }
+      buffer = Buffer.from(await file.arrayBuffer());
+    } else {
+      return NextResponse.json({ error: "No file" }, { status: 400 });
+    }
+
+    /* =====================================================
        PROCESS IMAGES (SHARP)
        ===================================================== */
-    const buffer = Buffer.from(await file.arrayBuffer());
     const timestamp = Date.now();
     const mediaId = nanoid(8);
     const userId = user.id;
@@ -99,6 +145,11 @@ export async function POST(req: Request) {
         contentType: "image/webp",
       }),
     ]);
+
+    // Cleanup temp if exists
+    if (tempKey) {
+      await deleteFromR2(tempKey).catch(() => {});
+    }
 
     /* =====================================================
        DATABASE INSERT
@@ -149,6 +200,9 @@ export async function POST(req: Request) {
         deleteFromR2(`${basePath}/display.webp`),
         deleteFromR2(`${basePath}/thumb.webp`),
       ]);
+    }
+    if (tempKey) {
+      await deleteFromR2(tempKey).catch(() => {});
     }
 
     return NextResponse.json(

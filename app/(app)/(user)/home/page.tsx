@@ -128,10 +128,10 @@ export default async function UserHomePage({
     <div className="relative w-full text-foreground selection:bg-pink-500/30">
       {/* ================= AMBIENT BACKGROUND ================= */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* Blobs matching settings page style */}
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-blob" />
-        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-4000" />
+        {/* Blobs matching settings page style - Static for performance */}
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 blur-[100px] rounded-full" />
+        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/5 blur-[100px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/5 blur-[100px] rounded-full" />
       </div>
 
       <div className="relative z-10 space-y-6 pt-2">
@@ -161,8 +161,8 @@ export default async function UserHomePage({
 
         {/* ================= PLAN STATUS CARD ================= */}
         <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-[32px] blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
-          <div className="relative rounded-[32px] bg-card/50 backdrop-blur-xl border border-border p-1">
+          <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500/20 to-purple-500/20 rounded-[32px] opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200" />
+          <div className="relative rounded-[32px] bg-card/50 border border-border p-1">
             <PlanStatus
               view={view}
               note={note}
@@ -173,7 +173,7 @@ export default async function UserHomePage({
 
         {/* ================= PENDING PAYMENT ALERT ================= */}
         {pendingIntent && (
-          <div className="relative overflow-hidden rounded-[32px] border border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 backdrop-blur-2xl p-6 shadow-2xl shadow-indigo-900/10 animate-in slide-in-from-bottom-5 fade-in duration-700">
+          <div className="relative overflow-hidden rounded-[32px] border border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-950/20 p-6 shadow-2xl shadow-indigo-900/10 animate-in slide-in-from-bottom-5 fade-in duration-700">
             {/* Inner Glow */}
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
 
@@ -192,7 +192,7 @@ export default async function UserHomePage({
                 </div>
               </div>
 
-              <div className="bg-background/40 dark:bg-black/20 rounded-2xl p-4 border border-border/50 dark:border-white/5 mb-6 flex justify-center backdrop-blur-sm">
+              <div className="bg-background/40 dark:bg-black/20 rounded-2xl p-4 border border-border/50 dark:border-white/5 mb-6 flex justify-center">
                 <PaymentCountdown
                   expiresAt={pendingIntent.expires_at}
                   createdAt={pendingIntent.created_at}
@@ -213,7 +213,7 @@ export default async function UserHomePage({
                   <Button
                     asChild
                     variant="outline"
-                    className="h-12 rounded-2xl border-border/50 bg-background/50 hover:bg-muted text-sm backdrop-blur-md transition-all active:scale-[0.98]"
+                    className="h-12 rounded-2xl border-border/50 bg-background/50 hover:bg-muted text-sm transition-all active:scale-[0.98]"
                   >
                     <Link href="/subscribe">Ganti Plan</Link>
                   </Button>
@@ -243,7 +243,7 @@ export default async function UserHomePage({
         <div className="grid grid-cols-2 gap-4 md:gap-6">
           <Link
             href="/gallery"
-            className="group relative h-48 overflow-hidden rounded-[32px] border border-border bg-card/40 dark:bg-white/[0.03] backdrop-blur-2xl p-6 transition-all hover:bg-muted/50 dark:hover:bg-white/[0.06] active:scale-[0.98]"
+            className="group relative h-48 overflow-hidden rounded-[32px] border border-border bg-card/40 dark:bg-white/[0.03] p-6 transition-all hover:bg-muted/50 dark:hover:bg-white/[0.06] active:scale-[0.98]"
           >
             {/* Gradient Orb */}
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/20 blur-2xl rounded-full group-hover:bg-purple-500/30 transition-all duration-500" />
@@ -271,7 +271,7 @@ export default async function UserHomePage({
 
           <Link
             href="/music"
-            className="group relative h-48 overflow-hidden rounded-[32px] border border-border bg-card/40 dark:bg-white/[0.03] backdrop-blur-2xl p-6 transition-all hover:bg-muted/50 dark:hover:bg-white/[0.06] active:scale-[0.98]"
+            className="group relative h-48 overflow-hidden rounded-[32px] border border-border bg-card/40 dark:bg-white/[0.03] p-6 transition-all hover:bg-muted/50 dark:hover:bg-white/[0.06] active:scale-[0.98]"
           >
             {/* Gradient Orb */}
             <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/20 blur-2xl rounded-full group-hover:bg-indigo-500/30 transition-all duration-500" />

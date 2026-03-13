@@ -234,30 +234,28 @@ function SortablePlaylistItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex flex-col rounded-xl border p-3 transition-all ${
+      {...attributes}
+      {...listeners}
+      className={`group relative flex flex-col rounded-2xl border p-4 transition-all select-none ${
         isDragging
-          ? "bg-white/90 shadow-xl ring-2 ring-pink-500 scale-[1.02] dark:bg-zinc-900/90 z-50"
-          : "bg-white/60 border-white/20 hover:bg-white/80 dark:bg-zinc-900/60 dark:border-white/10 dark:hover:bg-zinc-900/80 backdrop-blur-sm"
+          ? "bg-white shadow-2xl ring-2 ring-pink-500 scale-[1.02] dark:bg-zinc-900 z-50 opacity-90"
+          : "bg-white/60 border-white/20 hover:bg-white/80 dark:bg-zinc-900/60 dark:border-white/10 dark:hover:bg-zinc-900/80"
       }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 overflow-hidden">
-          {/* Drag Handle */}
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab text-muted-foreground hover:text-pink-600 p-1 -ml-1 touch-none transition-colors"
-          >
+          {/* Visual Indicator - Handle still here for cue */}
+          <div className="text-muted-foreground/40 group-hover:text-pink-500/60 p-1 -ml-1 transition-colors touch-none">
             <GripVertical className="h-5 w-5" />
           </div>
 
           <div className="flex flex-col overflow-hidden">
             <div className="flex items-center gap-2">
-              <span className="font-medium truncate text-sm text-foreground">
+              <span className="font-bold truncate text-sm text-foreground">
                 {item.music.title}
               </span>
               <span
-                className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase border tracking-wider ${
+                className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase border tracking-widest ${
                   item.source_type === "user"
                     ? "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-400 dark:border-pink-800"
                     : "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
@@ -266,29 +264,38 @@ function SortablePlaylistItem({
                 {item.source_type}
               </span>
             </div>
-            <span className="text-xs text-muted-foreground">
-              {fmtDuration(item.music.duration_seconds)}
-            </span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{fmtDuration(item.music.duration_seconds)}</span>
+              <span className="h-1 w-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+              <span className="text-[10px] opacity-60">
+                Tekan lama untuk geser
+              </span>
+            </div>
           </div>
         </div>
 
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 hover:bg-destructive/10 rounded-full"
-          onClick={() => onRemove(item.id)}
-          disabled={!!removingId}
-        >
-          {isRemoving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Trash2 className="w-4 h-4" />
-          )}
-        </Button>
+        <div onPointerDown={(e) => e.stopPropagation()}>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0 hover:bg-destructive/10 rounded-full transition-colors"
+            onClick={() => onRemove(item.id)}
+            disabled={!!removingId}
+          >
+            {isRemoving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Player Section */}
-      <div className="pt-2 border-t border-white/10 mt-2">
+      {/* Player Section - Prevent drag when interacting with player */}
+      <div
+        className="pt-3 border-t border-white/10 mt-3"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <MiniPlayer
           url={item.music.file_url}
           initialDuration={item.music.duration_seconds}
@@ -313,10 +320,10 @@ export function PlaylistManager({
   const dndId = useId();
   const sensors = useSensors(
     useSensor(MouseSensor, {
-      activationConstraint: { distance: 10 },
+      activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 100, tolerance: 5 },
+      activationConstraint: { delay: 300, tolerance: 10 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -337,7 +344,7 @@ export function PlaylistManager({
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white/20 dark:bg-zinc-900/20 backdrop-blur-sm">
+      <div className="text-center py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white/20 dark:bg-zinc-900/20">
         <p className="text-sm text-muted-foreground">
           Playlist kosong. Tambahkan musik dari library di bawah.
         </p>
@@ -419,7 +426,7 @@ export function LibraryItem({
 
   return (
     <>
-      <div className="group flex flex-col rounded-xl border border-white/20 bg-white/60 p-3 transition-all hover:bg-white/80 dark:bg-zinc-900/60 dark:border-white/10 dark:hover:bg-zinc-900/80 backdrop-blur-sm shadow-sm hover:shadow-md">
+      <div className="group flex flex-col rounded-xl border border-white/20 bg-white/60 p-3 transition-all hover:bg-white/80 dark:bg-zinc-900/60 dark:border-white/10 dark:hover:bg-zinc-900/80 shadow-sm hover:shadow-md">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="flex flex-col overflow-hidden">

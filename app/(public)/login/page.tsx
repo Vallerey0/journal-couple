@@ -73,7 +73,7 @@ export default async function LoginPage({
       {errorMsg ? (
         <Alert
           variant="destructive"
-          className="mb-6 rounded-2xl border-rose-200/50 bg-rose-50/50 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20"
+          className="mb-6 rounded-2xl border-rose-200/50 bg-rose-50/80 dark:border-rose-900/30 dark:bg-rose-900/40"
         >
           <CircleAlert />
           <AlertDescription>{errorMsg}</AlertDescription>
@@ -81,7 +81,7 @@ export default async function LoginPage({
       ) : null}
 
       {already ? (
-        <Alert className="mb-6 rounded-2xl border-amber-200/50 bg-amber-50/50 backdrop-blur-sm dark:border-amber-900/30 dark:bg-amber-900/20">
+        <Alert className="mb-6 rounded-2xl border-amber-200/50 bg-amber-50/80 dark:border-amber-900/30 dark:bg-amber-900/40">
           <Info />
           <AlertDescription>
             Akun kamu sudah aktif. Silakan login.
@@ -90,7 +90,7 @@ export default async function LoginPage({
       ) : null}
 
       {activated && !already ? (
-        <Alert className="mb-6 rounded-2xl border-emerald-200/50 bg-emerald-50/50 backdrop-blur-sm dark:border-emerald-900/30 dark:bg-emerald-900/20">
+        <Alert className="mb-6 rounded-2xl border-emerald-200/50 bg-emerald-50/80 dark:border-emerald-900/30 dark:bg-emerald-900/40">
           <CircleCheck />
           <AlertDescription>
             Akun berhasil diaktivasi. Silakan login.
@@ -99,7 +99,7 @@ export default async function LoginPage({
       ) : null}
 
       {unverified ? (
-        <Alert className="mb-6 rounded-2xl border-rose-200/50 bg-rose-50/50 backdrop-blur-sm dark:border-rose-900/30 dark:bg-rose-900/20">
+        <Alert className="mb-6 rounded-2xl border-rose-200/50 bg-rose-50/80 dark:border-rose-900/30 dark:bg-rose-900/40">
           <Info />
           <AlertDescription>
             Akun belum diaktivasi. Silakan cek email aktivasi.
@@ -108,7 +108,7 @@ export default async function LoginPage({
       ) : null}
 
       {resetOk ? (
-        <Alert className="mb-6 rounded-2xl border-emerald-200/50 bg-emerald-50/50 backdrop-blur-sm dark:border-emerald-900/30 dark:bg-emerald-900/20">
+        <Alert className="mb-6 rounded-2xl border-emerald-200/50 bg-emerald-50/80 dark:border-emerald-900/30 dark:bg-emerald-900/40">
           <CircleCheck />
           <AlertDescription>
             Password berhasil diubah. Silakan login.
@@ -118,7 +118,7 @@ export default async function LoginPage({
 
       {/* ✅ Resend activation: hanya saat unverified */}
       {showResend ? (
-        <div className="mb-6 rounded-2xl border border-zinc-200/50 bg-white/50 p-4 backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
+        <div className="mb-6 rounded-2xl border border-zinc-200/50 bg-white/80 p-4 dark:border-white/10 dark:bg-zinc-900/80">
           <p className="mb-3 text-sm text-zinc-700 dark:text-zinc-300">
             Belum menerima email aktivasi? Kirim ulang link aktivasi ke:
             <span className="ml-1 font-medium text-zinc-900 dark:text-white">

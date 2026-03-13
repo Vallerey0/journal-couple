@@ -1,6 +1,6 @@
 import { StaticImageData } from "next/image";
 import aether from "./aether/theme.config";
-import fire from "./fire/theme.config";
+import fire from "./sakura/theme.config";
 
 export type Theme = {
   code: string;

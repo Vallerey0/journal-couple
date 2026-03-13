@@ -137,7 +137,7 @@ export default function LoginForm({
           onChange={(e) => setField("email", e.target.value)}
           onBlur={() => blurField("email")}
           required
-          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 text-sm outline-none backdrop-blur-sm transition-all focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-pink-500/50"
+          className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/80 px-4 text-sm outline-none transition-all focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:bg-zinc-900/80 dark:text-white dark:focus:border-pink-500/50"
           placeholder="nama@email.com"
         />
         {touched.email && errors.email ? (
@@ -161,7 +161,7 @@ export default function LoginForm({
             required
             autoFocus={focusPassword}
             autoComplete="current-password"
-            className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/50 px-4 pr-12 text-sm outline-none backdrop-blur-sm transition-all focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:focus:border-pink-500/50"
+            className="mt-1 h-12 w-full rounded-xl border border-zinc-200/50 bg-white/80 px-4 pr-12 text-sm outline-none transition-all focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 dark:border-white/10 dark:bg-zinc-900/80 dark:text-white dark:focus:border-pink-500/50"
             placeholder="Password kamu"
           />
           <button

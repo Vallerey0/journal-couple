@@ -9,9 +9,9 @@ export const metadata: Metadata = {
   title: "Dashboard",
 };
 
-import { CoupleEmpty } from "./_components/couple-empty";
-import { CoupleDashboard } from "./_components/couple-dashboard";
-import { CoupleMissingPopup } from "./_components/couple-missing-popup";
+import { CoupleEmpty } from "../_components/couple-empty";
+import { CoupleDashboard } from "../_components/couple-dashboard";
+import { CoupleMissingPopup } from "../_components/couple-missing-popup";
 
 export default async function CouplePage() {
   const supabase = await createClient();

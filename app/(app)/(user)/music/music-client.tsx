@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Music as MusicIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   PlaylistManager,
   PlaylistItem,
@@ -50,15 +60,22 @@ export default function MusicClient({
   subscription: Subscription;
 }) {
   const router = useRouter();
+  const tabsId = useId();
+  const [mounted, setMounted] = useState(false);
 
   // State
   const [playlist, setPlaylist] = useState(initialPlaylist);
   const [userMusic, setUserMusic] = useState(initialUserMusic);
 
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const [addingId, setAddingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync state on props change
   useEffect(() => {
@@ -86,20 +103,64 @@ export default function MusicClient({
   // --- ACTIONS ---
 
   async function upload(file: File) {
+    // Check limits again before starting
+    if (userMusic.length >= maxMusic) {
+      if (isTrial) {
+        toast.error(
+          "Slot upload Trial sudah penuh (maks 1). Silakan upgrade ke Premium untuk menambah lebih banyak musik!",
+        );
+      } else {
+        toast.error(
+          `Slot upload Premium sudah penuh (maks ${maxMusic}). Hapus musik lama untuk mengganti dengan yang baru.`,
+        );
+      }
+      return;
+    }
+
     setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
+    setUploadProgress("Preparing upload...");
 
     try {
+      // 1. Get Presigned URL
+      const urlRes = await fetch("/api/music");
+      const { uploadUrl, tempKey, error: urlError } = await urlRes.json();
+      if (!urlRes.ok)
+        throw new Error(urlError ?? "Gagal mendapatkan izin upload");
+
+      // 2. Upload directly to R2
+      setUploadProgress("Uploading to storage...");
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Gagal mengunggah file ke storage");
+      }
+
+      // 3. Finalize in Server
+      setUploadProgress("Finalizing...");
+      const fd = new FormData();
+      fd.append("tempKey", tempKey);
+      fd.append("fileName", file.name);
+
       const res = await fetch("/api/music", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Upload failed");
+
       toast.success("Musik berhasil diupload");
       router.refresh();
     } catch (e: any) {
-      toast.error(e.message || "Gagal mengupload musik");
+      console.error("Music upload error:", e);
+      toast.error(
+        "Gagal mengunggah musik. Pastikan koneksi internet stabil dan coba lagi.",
+      );
     } finally {
       setUploading(false);
+      setUploadProgress("");
     }
   }
 
@@ -143,8 +204,9 @@ export default function MusicClient({
     }
   }
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   async function deleteUserMusic(id: string) {
-    if (!confirm("Hapus file musik ini permanen?")) return;
     setDeletingId(id);
 
     try {
@@ -156,6 +218,7 @@ export default function MusicClient({
       toast.error("Gagal menghapus musik");
     } finally {
       setDeletingId(null);
+      setDeleteConfirmId(null);
     }
   }
 
@@ -181,11 +244,11 @@ export default function MusicClient({
 
   return (
     <div className="relative min-h-[calc(100vh-4rem)] w-full overflow-hidden pb-24">
-      {/* BACKGROUND BLOBS - Lightweight CSS Animation */}
+      {/* BACKGROUND BLOBS - Static for performance */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob will-change-transform" />
-        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-2000 will-change-transform" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/10 blur-[100px] rounded-full mix-blend-multiply animate-blob animation-delay-4000 will-change-transform" />
+        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-purple-500/5 blur-[100px] rounded-full" />
+        <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-cyan-500/5 blur-[100px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] bg-pink-500/5 blur-[100px] rounded-full" />
       </div>
 
       <div className="relative z-10 w-full px-4 sm:px-0 max-w-xl mx-auto space-y-8 pt-6">
@@ -200,7 +263,7 @@ export default function MusicClient({
         </div>
 
         {/* ===== STATUS BANNER ===== */}
-        <div className="rounded-2xl border border-white/20 bg-white/40 p-5 shadow-xl shadow-purple-500/5 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/40">
+        <div className="rounded-2xl border border-white/20 bg-white/40 p-5 shadow-lg shadow-purple-500/5 dark:border-white/10 dark:bg-zinc-900/40">
           {!subscription.allowed && (
             <p className="text-destructive font-medium flex items-center gap-2">
               <span className="relative flex h-2 w-2">
@@ -269,122 +332,165 @@ export default function MusicClient({
           <h3 className="font-bold text-lg px-1 text-foreground">
             Koleksi Musik
           </h3>
-          <Tabs defaultValue="user" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-zinc-100/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-xl border border-white/20">
-              <TabsTrigger
+          {mounted ? (
+            <Tabs id={tabsId} defaultValue="user" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6 h-12 p-1 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-xl border border-white/20">
+                <TabsTrigger
+                  value="user"
+                  className="rounded-lg h-full data-[state=active]:bg-white data-[state=active]:text-pink-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-pink-400 transition-all duration-300"
+                >
+                  Upload Saya
+                </TabsTrigger>
+                <TabsTrigger
+                  value="default"
+                  className="rounded-lg h-full data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-purple-400 transition-all duration-300"
+                >
+                  Galeri Bawaan
+                </TabsTrigger>
+              </TabsList>
+
+              {/* USER UPLOADS */}
+              <TabsContent
                 value="user"
-                className="rounded-lg h-full data-[state=active]:bg-white data-[state=active]:text-pink-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-pink-400 transition-all duration-300"
+                className="space-y-6 focus-visible:outline-none"
               >
-                Upload Saya
-              </TabsTrigger>
-              <TabsTrigger
-                value="default"
-                className="rounded-lg h-full data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm dark:data-[state=active]:bg-zinc-700 dark:data-[state=active]:text-purple-400 transition-all duration-300"
-              >
-                Galeri Bawaan
-              </TabsTrigger>
-            </TabsList>
-
-            {/* USER UPLOADS */}
-            <TabsContent
-              value="user"
-              className="space-y-6 focus-visible:outline-none"
-            >
-              {/* Upload Box */}
-              <div className="relative group">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl opacity-20 group-hover:opacity-40 transition duration-500 blur"></div>
-                <div className="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm transition-colors hover:bg-white/80 dark:hover:bg-zinc-900/80">
-                  <input
-                    type="file"
-                    accept="audio/mpeg"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed z-20"
-                    disabled={
-                      !canUpload || uploading || userMusic.length >= maxMusic
-                    }
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) upload(f);
-                      e.target.value = "";
-                    }}
-                  />
-
-                  <div className="p-3 bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/20 dark:to-purple-900/20 rounded-full mb-3 text-pink-600 dark:text-pink-400">
-                    {uploading ? (
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                    ) : (
-                      <MusicIcon className="w-6 h-6" />
-                    )}
+                {/* Upload Box */}
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl opacity-10 group-hover:opacity-20 transition duration-500"></div>
+                  <div className="relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-900/50 transition-colors hover:bg-white/80 dark:hover:bg-zinc-900/80">
+                    <input
+                      type="file"
+                      accept="audio/mpeg"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                      onClick={(e) => {
+                        if (userMusic.length >= maxMusic) {
+                          e.preventDefault();
+                          if (isTrial) {
+                            toast.error(
+                              "Slot upload Trial sudah penuh (maks 1). Silakan upgrade ke Premium untuk menambah lebih banyak musik!",
+                            );
+                          } else {
+                            toast.error(
+                              `Slot upload Premium sudah penuh (maks ${maxMusic}). Hapus musik lama untuk mengganti dengan yang baru.`,
+                            );
+                          }
+                        }
+                      }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) upload(file);
+                      }}
+                      disabled={uploading || !canUpload}
+                    />
+                    <div className="h-12 w-12 rounded-full bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center mb-3">
+                      {uploading ? (
+                        <Loader2 className="h-6 w-6 text-pink-500 animate-spin" />
+                      ) : (
+                        <MusicIcon className="h-6 w-6 text-pink-500" />
+                      )}
+                    </div>
+                    <div className="text-center">
+                      <p className="font-medium text-sm">
+                        {uploading ? uploadProgress : "Pilih musik (MP3)"}
+                      </p>
+                      <p className="text-[10px] mt-1 opacity-70">
+                        Maks 10MB. Durasi 5 detik - 10 menit.
+                      </p>
+                    </div>
                   </div>
-
-                  <p className="font-semibold text-sm mb-1">
-                    {uploading
-                      ? "Sedang Mengupload..."
-                      : userMusic.length >= maxMusic
-                        ? "Batas Upload Tercapai"
-                        : "Upload File MP3"}
-                  </p>
-                  <p className="text-xs text-muted-foreground text-center max-w-[200px]">
-                    {userMusic.length >= maxMusic
-                      ? "Hapus musik lama untuk menambah yang baru."
-                      : "Maksimal 10MB per file. Hanya format MP3."}
-                  </p>
                 </div>
-              </div>
 
-              <div className="space-y-3">
-                {userMusic.length === 0 ? (
-                  <div className="text-center py-10 opacity-50">
-                    <p className="text-sm font-medium">
-                      Belum ada musik yang diupload.
-                    </p>
-                  </div>
-                ) : (
-                  userMusic.map((m) => {
-                    const added = isInPlaylist(m.id, "user");
-                    return (
-                      <LibraryItem
-                        key={m.id}
-                        title={m.title}
-                        duration={m.duration_seconds}
-                        fileUrl={m.file_url}
-                        isAdded={added}
-                        isAdding={addingId === m.id}
-                        isDeleting={deletingId === m.id}
-                        onAdd={() => !added && addToPlaylist(m.id, "user")}
-                        onDelete={() => deleteUserMusic(m.id)}
-                        onRename={(name) => renameUserMusic(m.id, name)}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </TabsContent>
+                {/* Music List */}
+                <div className="space-y-3">
+                  {userMusic.length === 0 ? (
+                    <div className="text-center py-12 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-2xl">
+                      <p className="text-sm text-muted-foreground">
+                        Belum ada musik yang diupload.
+                      </p>
+                    </div>
+                  ) : (
+                    userMusic.map((m) => {
+                      const added = isInPlaylist(m.id, "user");
+                      return (
+                        <LibraryItem
+                          key={m.id}
+                          title={m.title}
+                          duration={m.duration_seconds}
+                          fileUrl={m.file_url}
+                          isAdded={added}
+                          isAdding={addingId === m.id}
+                          isDeleting={deletingId === m.id}
+                          onAdd={() => !added && addToPlaylist(m.id, "user")}
+                          onDelete={() => setDeleteConfirmId(m.id)}
+                          onRename={(name) => renameUserMusic(m.id, name)}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              </TabsContent>
 
-            {/* DEFAULT MUSIC */}
-            <TabsContent
-              value="default"
-              className="space-y-3 focus-visible:outline-none"
-            >
-              {defaultMusic.map((m) => {
-                const added = isInPlaylist(m.id, "default");
-                return (
-                  <LibraryItem
-                    key={m.id}
-                    title={m.title}
-                    duration={m.duration_seconds}
-                    fileUrl={m.file_url}
-                    isAdded={added}
-                    isAdding={addingId === m.id}
-                    onAdd={() => !added && addToPlaylist(m.id, "default")}
-                    isPremiumOnly={m.is_premium_only}
-                    canAccessPremium={isPremium}
-                  />
-                );
-              })}
-            </TabsContent>
-          </Tabs>
+              {/* DEFAULT MUSIC */}
+              <TabsContent
+                value="default"
+                className="space-y-3 focus-visible:outline-none"
+              >
+                {defaultMusic.map((m) => {
+                  const added = isInPlaylist(m.id, "default");
+                  return (
+                    <LibraryItem
+                      key={m.id}
+                      title={m.title}
+                      duration={m.duration_seconds}
+                      fileUrl={m.file_url}
+                      isAdded={added}
+                      isAdding={addingId === m.id}
+                      onAdd={() => !added && addToPlaylist(m.id, "default")}
+                      isPremiumOnly={m.is_premium_only}
+                      canAccessPremium={isPremium}
+                    />
+                  );
+                })}
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="h-[400px] w-full flex items-center justify-center">
+              <Loader2 className="h-8 w-8 text-pink-500 animate-spin" />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* DELETE CONFIRMATION DIALOG */}
+      <AlertDialog
+        open={!!deleteConfirmId}
+        onOpenChange={(open) => !open && setDeleteConfirmId(null)}
+      >
+        <AlertDialogContent className="rounded-3xl border-pink-100 dark:border-pink-900/30 backdrop-blur-xl bg-white/95 dark:bg-zinc-900/95 z-[10001] shadow-2xl shadow-pink-500/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+              Hapus Musik?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400">
+              Tindakan ini tidak dapat dibatalkan. File musik akan dihapus
+              permanen dari library Anda.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-6">
+            <AlertDialogCancel className="rounded-2xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                deleteConfirmId && deleteUserMusic(deleteConfirmId)
+              }
+              className="rounded-2xl bg-gradient-to-r from-pink-500 to-rose-600 text-white hover:from-pink-600 hover:to-rose-700 shadow-lg shadow-pink-500/25 border-none transition-all active:scale-95"
+            >
+              Hapus Sekarang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

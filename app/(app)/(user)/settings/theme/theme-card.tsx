@@ -10,6 +10,7 @@ import {
   Sparkles,
   AlertCircle,
   CalendarClock,
+  Loader2,
 } from "lucide-react";
 import { SubscriptionGuardResult } from "@/lib/subscriptions/guard";
 import { canUseTheme } from "@/lib/theme/access";
@@ -102,7 +103,7 @@ export default function ThemeCard({
           isGrace && "ring-4 ring-amber-500/50",
           !released && "opacity-90", // Visual cue for unreleased
           (pending || (isGrace && !active)) && "cursor-not-allowed opacity-80",
-          "bg-white/5 dark:bg-zinc-900/5 backdrop-blur-sm", // Glass base
+          "bg-white/5 dark:bg-zinc-900/5", // Glass base without blur
         )}
       >
         <Image
@@ -120,10 +121,17 @@ export default function ThemeCard({
         {/* Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
 
+        {/* Loading Spinner */}
+        {pending && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+            <Loader2 className="h-8 w-8 animate-spin text-white shadow-lg" />
+          </div>
+        )}
+
         {/* Status Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start z-10">
           {active && (
-            <div className="flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg backdrop-blur-md border border-white/20">
+            <div className="flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg border border-white/20">
               <Check className="h-2.5 w-2.5" />
               Applied
             </div>
@@ -131,7 +139,7 @@ export default function ThemeCard({
 
           {/* Coming Soon Badge */}
           {!released && (
-            <div className="flex items-center gap-1 rounded-full bg-blue-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg backdrop-blur-md border border-white/20">
+            <div className="flex items-center gap-1 rounded-full bg-blue-500/90 px-2 py-0.5 text-[9px] font-bold text-white shadow-lg border border-white/20">
               <CalendarClock className="h-2.5 w-2.5" />
               Soon
             </div>
@@ -140,7 +148,7 @@ export default function ThemeCard({
           {isPremium && (
             <div
               className={cn(
-                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold text-white shadow-lg backdrop-blur-md border border-white/20",
+                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold text-white shadow-lg border border-white/20",
                 locked
                   ? "bg-rose-500/90"
                   : "bg-gradient-to-r from-amber-500 to-orange-500",

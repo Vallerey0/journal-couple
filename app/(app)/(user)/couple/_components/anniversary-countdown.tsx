@@ -1,5 +1,7 @@
 type AnniversaryCountdownProps = {
   relationship_start_date: string;
+  engaged_at?: string | null;
+  married_at?: string | null;
   theme: {
     from: string;
     via: string;
@@ -7,44 +9,70 @@ type AnniversaryCountdownProps = {
   };
 };
 
-function getAnniversaryInfo(startDate: string) {
-  const start = new Date(startDate);
+function getAnniversaryInfo(
+  relationship_start_date: string,
+  engaged_at?: string | null,
+  married_at?: string | null,
+) {
+  const dates = [
+    { label: "Pacaran", date: relationship_start_date, weight: 3 },
+    { label: "Tunangan", date: engaged_at, weight: 2 },
+    { label: "Menikah", date: married_at, weight: 1 }, // Weight for priority if same day
+  ].filter((d) => !!d.date);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const anniversaryThisYear = new Date(
-    today.getFullYear(),
-    start.getMonth(),
-    start.getDate(),
-  );
-  anniversaryThisYear.setHours(0, 0, 0, 0);
-
-  let target = anniversaryThisYear;
-
-  if (anniversaryThisYear < today) {
-    target = new Date(
-      today.getFullYear() + 1,
+  const upcomingAnniversaries = dates.map(({ label, date, weight }) => {
+    const start = new Date(date!);
+    let target = new Date(
+      today.getFullYear(),
       start.getMonth(),
       start.getDate(),
     );
     target.setHours(0, 0, 0, 0);
-  }
 
-  const diffTime = target.getTime() - today.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    if (target < today) {
+      target = new Date(
+        today.getFullYear() + 1,
+        start.getMonth(),
+        start.getDate(),
+      );
+      target.setHours(0, 0, 0, 0);
+    }
+
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    return { label, daysLeft: diffDays, weight };
+  });
+
+  // Sort by daysLeft, then by weight (smaller weight = higher priority, e.g. Menikah > Tunangan > Pacaran)
+  upcomingAnniversaries.sort((a, b) => {
+    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+    return a.weight - b.weight;
+  });
+
+  const next = upcomingAnniversaries[0];
 
   return {
-    daysLeft: diffDays,
-    isToday: diffDays === 0,
+    label: next.label,
+    daysLeft: next.daysLeft,
+    isToday: next.daysLeft === 0,
   };
 }
 
 export function AnniversaryCountdown({
   relationship_start_date,
+  engaged_at,
+  married_at,
   theme,
 }: AnniversaryCountdownProps) {
-  const { daysLeft, isToday } = getAnniversaryInfo(relationship_start_date);
+  const { label, daysLeft, isToday } = getAnniversaryInfo(
+    relationship_start_date,
+    engaged_at,
+    married_at,
+  );
 
   return (
     <div
@@ -89,33 +117,36 @@ export function AnniversaryCountdown({
         {isToday ? (
           <>
             <p className="text-[10px] uppercase tracking-widest text-black/60">
-              Hari ini
+              Hari Spesial
             </p>
 
-            <p className="mt-1 text-[20px] font-semibold tracking-tight">
-              Selamat Anniversary
+            <p className="mt-1 text-[18px] font-bold tracking-tight text-black/90">
+              Anniversary {label} 🎉
             </p>
 
-            <p className="mt-0.5 text-[13px] text-black/60">
+            <p className="mt-0.5 text-[12px] text-black/60">
               Rayakan hari ini dengan penuh cinta
             </p>
           </>
         ) : (
           <>
             <p className="text-[10px] uppercase tracking-widest text-black/60">
-              Anniversary berikutnya
+              Menuju Hari Bahagia
             </p>
 
-            <div className="mt-1 flex items-baseline justify-center gap-1">
-              <span className="text-[36px] font-semibold tracking-tight leading-none">
-                {daysLeft}
-              </span>
-              <span className="text-[13px] text-black/60">hari</span>
+            <div className="mt-1 flex flex-col items-center">
+              <p className="text-[14px] font-bold text-black/80 leading-tight">
+                Anniversary {label}
+              </p>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[40px] font-black tracking-tighter leading-none text-black/90">
+                  {daysLeft}
+                </span>
+                <span className="text-[13px] font-bold text-black/60 uppercase tracking-widest">
+                  Hari Lagi
+                </span>
+              </div>
             </div>
-
-            <p className="mt-0.5 text-[12px] text-black/60">
-              Jangan lupa rayakan
-            </p>
           </>
         )}
       </div>

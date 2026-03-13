@@ -115,7 +115,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
 
       <header className="fixed inset-x-0 top-0 z-40">
         <div className="container mx-auto px-4 pt-3 sm:pt-4">
-          <div className="flex h-12 items-center justify-between rounded-2xl border border-white/40 bg-white/35 px-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-950/40 sm:h-14 sm:px-3">
+          <div className="flex h-12 items-center justify-between rounded-2xl border border-white/40 bg-white/70 px-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-zinc-950/80 sm:h-14 sm:px-3">
             <Link
               href="/"
               className="flex items-center gap-2 rounded-xl px-2 py-1 font-semibold tracking-tight transition-colors hover:bg-zinc-900/5 dark:hover:bg-white/5"
@@ -156,7 +156,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-52 rounded-2xl border-zinc-200/60 bg-white/80 p-2 shadow-lg backdrop-blur-xl dark:border-zinc-800/60 dark:bg-zinc-950/70"
+                  className="w-52 rounded-2xl border-zinc-200/60 bg-white/95 p-2 shadow-lg dark:border-zinc-800/60 dark:bg-zinc-950/95"
                 >
                   <DropdownMenuLabel className="flex items-center gap-2 px-2 py-2 text-xs tracking-wide text-zinc-500 dark:text-zinc-400">
                     <ThemeIcon t={displayTheme} />
@@ -217,7 +217,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 rounded-2xl border-zinc-200/60 bg-white/80 p-2 shadow-lg backdrop-blur-xl dark:border-zinc-800/60 dark:bg-zinc-950/70"
+                  className="w-56 rounded-2xl border-zinc-200/60 bg-white/95 p-2 shadow-lg dark:border-zinc-800/60 dark:bg-zinc-950/95"
                 >
                   <DropdownMenuLabel className="px-2 py-2 text-xs tracking-wide text-zinc-500 dark:text-zinc-400">
                     Menu
@@ -336,7 +336,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="mb-6 inline-flex items-center gap-2 rounded-full border border-pink-200/50 bg-white/50 px-4 py-1.5 text-sm font-medium text-pink-600 backdrop-blur-md dark:border-pink-800/50 dark:bg-white/5 dark:text-pink-300"
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-pink-200/50 bg-white/50 px-4 py-1.5 text-sm font-medium text-pink-600 dark:border-pink-800/50 dark:bg-white/5 dark:text-pink-300"
           >
             <Sparkles className="h-4 w-4" />
             <span>Journal Couple Premium</span>
@@ -387,7 +387,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
             <Button
               size="lg"
               variant="outline"
-              className="h-14 rounded-full border-zinc-200 bg-white/50 px-8 text-base backdrop-blur-sm hover:bg-white/80 dark:border-zinc-800 dark:bg-white/5 dark:hover:bg-white/10"
+              className="h-14 rounded-full border-zinc-200 bg-white/50 px-8 text-base hover:bg-white/80 dark:border-zinc-800 dark:bg-white/5 dark:hover:bg-white/10"
               asChild
             >
               <Link href="/login">Login</Link>
@@ -426,7 +426,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                   </div>
                 </div>
 
-                <div className="absolute left-4 right-4 top-14 z-20 flex h-8 items-center justify-center rounded-full bg-black/20 text-[10px] text-white backdrop-blur-md">
+                <div className="absolute left-4 right-4 top-14 z-20 flex h-8 items-center justify-center rounded-full bg-black/40 text-[10px] text-white">
                   journalcouple.com/arya-dinda
                 </div>
 
@@ -440,7 +440,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.8 }}
-                    className="absolute bottom-6 left-4 right-4 rounded-2xl border border-white/20 bg-white/10 p-4 shadow-lg backdrop-blur-md"
+                    className="absolute bottom-6 left-4 right-4 rounded-2xl border border-white/20 bg-black/20 p-4 shadow-lg"
                   >
                     <div className="mb-2 flex items-center gap-2">
                       <div className="flex -space-x-2">
@@ -477,7 +477,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                 ease: "easeInOut",
                 delay: 1,
               }}
-              className="absolute -right-8 top-20 z-20 rounded-2xl border border-white/40 bg-white/20 p-4 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-black/20"
+              className="absolute -right-8 top-20 z-20 rounded-2xl border border-white/40 bg-white/40 p-4 shadow-xl dark:border-white/10 dark:bg-black/40"
             >
               <Heart className="h-8 w-8 fill-pink-500/50 text-pink-500" />
             </motion.div>
@@ -490,7 +490,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                 ease: "easeInOut",
                 delay: 0.5,
               }}
-              className="absolute -left-8 bottom-40 z-20 rounded-2xl border border-white/40 bg-white/20 p-4 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-black/20"
+              className="absolute -left-8 bottom-40 z-20 rounded-2xl border border-white/40 bg-white/40 p-4 shadow-xl dark:border-white/10 dark:bg-black/40"
             >
               <Star className="h-8 w-8 fill-yellow-400/50 text-yellow-400" />
             </motion.div>
@@ -540,7 +540,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-md transition-all hover:bg-white/20 hover:shadow-lg dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10"
+                className="group relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm transition-all hover:bg-white/20 hover:shadow-lg dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10"
               >
                 <div
                   className={cn(
@@ -576,7 +576,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
           </div>
 
           {plans.length === 0 ? (
-            <div className="mx-auto max-w-xl rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-sm text-zinc-600 backdrop-blur-md dark:border-white/5 dark:bg-white/5 dark:text-zinc-300">
+            <div className="mx-auto max-w-xl rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-sm text-zinc-600 dark:border-white/5 dark:bg-white/5 dark:text-zinc-300">
               Paket belum tersedia.
             </div>
           ) : (
@@ -598,7 +598,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
                   <div
                     key={plan.id}
                     className={cn(
-                      "relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm backdrop-blur-md transition-all dark:border-white/5 dark:bg-white/5",
+                      "relative overflow-hidden rounded-3xl border border-white/20 bg-white/10 p-8 shadow-sm transition-all dark:border-white/5 dark:bg-white/5",
                       isDiscounted
                         ? "ring-1 ring-pink-500/30 shadow-lg shadow-pink-500/10"
                         : "hover:bg-white/20 hover:shadow-lg dark:hover:bg-white/10",
@@ -670,7 +670,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="mx-auto max-w-3xl rounded-[3rem] border border-white/20 bg-white/10 p-12 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-white/5"
+            className="mx-auto max-w-3xl rounded-[3rem] border border-white/20 bg-white/10 p-12 shadow-2xl dark:border-white/10 dark:bg-white/5"
           >
             <h2 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl">
               Mulai kisah kalian hari ini.
@@ -690,7 +690,7 @@ export default function HomeClient({ plans, ctaHref }: Props) {
         </div>
       </section>
 
-      <footer className="mt-32 border-t border-zinc-200/60 bg-white/40 py-12 text-sm text-zinc-600 backdrop-blur-sm dark:border-zinc-800/60 dark:bg-zinc-950/20 dark:text-zinc-400">
+      <footer className="mt-32 border-t border-zinc-200/60 bg-white/40 py-12 text-sm text-zinc-600 dark:border-zinc-800/60 dark:bg-zinc-950/20 dark:text-zinc-400">
         <div className="container mx-auto px-4">
           <div className="grid gap-10 md:grid-cols-3">
             <div className="space-y-3">

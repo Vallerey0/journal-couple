@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/user/bottom-nav";
 import Script from "next/script";
 import { Metadata } from "next";
 import UserIdleLogout from "@/components/user/user-idle-logout";
+import { GlobalLoading } from "@/components/ui/global-loading";
 
 export const metadata: Metadata = {
   title: {

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
+import { CancelPaymentButton } from "@/app/(app)/(user)/subscribe/_components/cancel-payment-button";
 import { PaymentCountdown } from "@/components/user/payment-countdown";
 import { Check, X, Clock } from "lucide-react";
 
@@ -237,21 +237,7 @@ export default async function BillingPage() {
                   </Link>
                 </Button>
 
-                <form action={cancelPendingIntentAction} className="w-full">
-                  <input
-                    type="hidden"
-                    name="intent_id"
-                    value={pendingIntent.id}
-                  />
-                  <input type="hidden" name="next" value="/settings/billing" />
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    className="w-full h-11 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  >
-                    Batalkan Transaksi
-                  </Button>
-                </form>
+                <CancelPaymentButton intentId={pendingIntent.id} />
               </div>
             </Card>
           ) : null}

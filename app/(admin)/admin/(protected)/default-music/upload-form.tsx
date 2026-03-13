@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Loader2, UploadCloud, Music } from "lucide-react";
-import { createDefaultMusicAction } from "./actions";
+import { createDefaultMusicAction, getMusicUploadUrlAction } from "./actions";
 import { useCenterToast, CenterToast } from "@/components/admin/CenterToast";
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -30,6 +30,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 
 export default function UploadForm() {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const { msg, show } = useCenterToast();
@@ -64,22 +65,49 @@ export default function UploadForm() {
     }
 
     setIsUploading(true);
+    setUploadProgress("Preparing upload...");
 
     try {
-      // Use Server Action instead of API Route
-      await createDefaultMusicAction(formData);
+      // 1. Get Presigned URL (Bypass Vercel Body Limit)
+      const { uploadUrl, tempKey } = await getMusicUploadUrlAction();
+
+      // 2. Upload directly to R2 from Client
+      setUploadProgress("Uploading to storage...");
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Gagal mengunggah file ke storage");
+      }
+
+      // 3. Finalize in Server (Validate & Save DB)
+      setUploadProgress("Finalizing...");
+      const finalFormData = new FormData();
+      finalFormData.append("title", title);
+      finalFormData.append(
+        "description",
+        String(formData.get("description") ?? ""),
+      );
+      finalFormData.append(
+        "is_premium_only",
+        formData.get("is_premium_only") === "on" ? "on" : "off",
+      );
+      finalFormData.append("tempKey", tempKey);
+
+      await createDefaultMusicAction(finalFormData);
 
       toast.success("Music uploaded successfully");
       formRef.current?.reset();
-      // Server Action revalidates path, but we can refresh to be sure
-      // router.refresh(); // Not strictly needed if revalidatePath works, but good for safety
     } catch (error: any) {
-      // Server errors also shown in CenterToast or Sonner?
-      // User liked Subscription error handling. Subscription uses CenterToast for validation.
-      // Let's use CenterToast for the error message too for consistency.
       show(error.message || "Failed to upload music");
     } finally {
       setIsUploading(false);
+      setUploadProgress("");
     }
   }
 
@@ -156,7 +184,7 @@ export default function UploadForm() {
           {isUploading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
+              {uploadProgress || "Uploading..."}
             </>
           ) : (
             <>

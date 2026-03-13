@@ -194,8 +194,11 @@ export default function SnapPayButton({ intentId }: Props) {
           <Button
             type="button"
             variant="ghost"
-            className="w-full rounded-xl text-pink-600 hover:text-pink-700 hover:bg-pink-50 dark:text-pink-400 dark:hover:bg-pink-900/20"
+            disabled={loading}
+            className="w-full rounded-xl text-pink-600 hover:text-pink-700 hover:bg-pink-50 dark:text-pink-400 dark:hover:bg-pink-900/20 disabled:opacity-50"
             onClick={() => {
+              if (loading) return;
+              setLoading(true);
               window.location.href = redirectUrl;
             }}
           >
@@ -225,7 +228,7 @@ export default function SnapPayButton({ intentId }: Props) {
             : "hidden"
         }
       >
-        <div className="mx-auto flex h-[100dvh] w-full max-w-md flex-col bg-background pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-[calc(100dvh-5.5rem)] w-full max-w-md flex-col rounded-b-3xl bg-background pt-[env(safe-area-inset-top)] shadow-2xl overflow-hidden">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <Button
               type="button"

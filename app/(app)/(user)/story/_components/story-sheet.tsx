@@ -262,7 +262,7 @@ export function StorySheet({
               <div className="space-y-4 select-none touch-manipulation">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "d MMMM yyyy") : "Unknown Date"}
+                  {date ? format(date, "dd-MM-yyyy") : "Unknown Date"}
                 </div>
 
                 <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap leading-relaxed">
@@ -290,7 +290,11 @@ export function StorySheet({
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : <span>Pick a date</span>}
+                        {date ? (
+                          format(date, "dd-MM-yyyy")
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
@@ -300,6 +304,7 @@ export function StorySheet({
                       <Calendar
                         mode="single"
                         selected={date}
+                        defaultMonth={date}
                         onSelect={(d) => {
                           setDate(d);
                           setCalendarOpen(false);

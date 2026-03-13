@@ -15,7 +15,8 @@ export default async function AdminUsersPage({
   const supabase = await createClient();
   const adminAuth = createAdminClient();
 
-  let usersQuery = supabase
+  // Use admin client to bypass RLS for fetching user profiles
+  let usersQuery = adminAuth
     .from("profiles")
     .select(
       `

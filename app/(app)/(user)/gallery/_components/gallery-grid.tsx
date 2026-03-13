@@ -120,7 +120,7 @@ export function GalleryGrid({
     return (
       <div className="relative pb-24">
         <div className="sticky top-0 z-20 mb-6">
-          <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/30 p-6 text-zinc-800 shadow-xl shadow-pink-500/5 backdrop-blur-xl dark:bg-black/30 dark:text-white">
+          <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/80 p-6 text-zinc-800 shadow-xl shadow-pink-500/5 dark:bg-zinc-900/80 dark:text-white">
             <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5" />
             <div className="relative z-10 flex items-center justify-between">
               <div className="space-y-1">
@@ -236,7 +236,7 @@ export function GalleryGrid({
     <div className="relative pb-24">
       {/* 🔒 STICKY HEADER */}
       <div className="sticky top-0 z-20 mb-6">
-        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/30 p-6 text-zinc-800 shadow-xl shadow-pink-500/5 backdrop-blur-xl dark:bg-black/30 dark:text-white">
+        <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/80 p-6 text-zinc-800 shadow-xl shadow-pink-500/5 dark:bg-zinc-900/80 dark:text-white">
           <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5" />
 
           <div className="relative z-10 flex items-center justify-between">
@@ -381,7 +381,7 @@ export function GalleryGrid({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/60 backdrop-blur-[2px] rounded-2xl"
+                        className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/70 rounded-2xl"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex gap-3">

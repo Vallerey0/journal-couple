@@ -37,7 +37,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-4 z-50 mx-auto w-full max-w-md px-2">
-      <div className="relative rounded-full border border-white/20 bg-white/70 shadow-xl shadow-pink-500/10 backdrop-blur-xl dark:border-white/10 dark:bg-black/60 dark:shadow-pink-900/20">
+      <div className="relative rounded-full border border-white/20 bg-white/90 shadow-xl shadow-pink-500/10 dark:border-white/10 dark:bg-zinc-900/90 dark:shadow-pink-900/20">
         <ul className="flex items-center justify-between px-2 py-2">
           {NAV.map((item) => {
             const active = isActive(pathname, item);

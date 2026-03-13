@@ -1,7 +1,8 @@
+"use client";
+
 import { archiveCouple } from "@/lib/couples/actions";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Metadata } from "next";
 import {
   ArrowLeft,
   Archive,
@@ -9,14 +10,13 @@ import {
   History,
   AlertTriangle,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-export const metadata: Metadata = {
-  title: "Relationship Settings",
-};
+import { useTransition } from "react";
 
 export default function CoupleSettingsPage() {
+  const [isPending, startTransition] = useTransition();
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       {/* BACKGROUND BLOBS */}
@@ -99,12 +99,28 @@ export default function CoupleSettingsPage() {
                   </div>
                 </div>
 
-                <form action={archiveCouple}>
+                <form
+                  action={() => {
+                    if (isPending) return;
+                    startTransition(async () => {
+                      await archiveCouple();
+                    });
+                  }}
+                >
                   <Button
+                    type="submit"
+                    disabled={isPending}
                     variant="outline"
-                    className="w-full rounded-xl h-11 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-500"
+                    className="w-full rounded-xl h-11 border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-500 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    Archive Relationship
+                    {isPending ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Mengarsipkan...</span>
+                      </div>
+                    ) : (
+                      "Archive Relationship"
+                    )}
                   </Button>
                 </form>
               </div>

@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { uploadToR2, deleteFromR2 } from "@/lib/cloudflare/r2";
+import {
+  uploadToR2,
+  deleteFromR2,
+  getPresignedUploadUrl,
+  getObject,
+  copyObject,
+} from "@/lib/cloudflare/r2";
 import { randomUUID, createHash } from "crypto";
 import { parseBuffer } from "music-metadata";
 
@@ -17,6 +23,33 @@ function slugify(v: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "");
+}
+
+export async function getMusicUploadUrlAction() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  assertAdmin(profile);
+
+  const fileId = randomUUID();
+  const tempKey = `temp/music/${fileId}.mp3`;
+
+  const uploadUrl = await getPresignedUploadUrl({
+    key: tempKey,
+    contentType: "audio/mpeg",
+    expiresIn: 600, // 10 minutes
+  });
+
+  return { uploadUrl, tempKey };
 }
 
 export async function createDefaultMusicAction(formData: FormData) {
@@ -41,17 +74,27 @@ export async function createDefaultMusicAction(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const isPremiumOnly = formData.get("is_premium_only") === "on";
   const file = formData.get("file") as File | null;
+  const tempKey = formData.get("tempKey") as string | null;
 
-  if (!title || !file) {
+  if (!title || (!file && !tempKey)) {
     throw new Error("Judul dan file wajib diisi");
   }
 
-  if (file.type !== "audio/mpeg") {
-    throw new Error("Format file harus MP3");
-  }
-
   // 3. Process File
-  const buffer = Buffer.from(await file.arrayBuffer());
+  let buffer: Buffer;
+
+  if (tempKey) {
+    // Direct R2 Upload flow (Bypass Vercel limit)
+    buffer = await getObject(tempKey);
+  } else if (file && file.size > 0) {
+    // Standard flow (Dev or small files)
+    if (file.type !== "audio/mpeg") {
+      throw new Error("Format file harus MP3");
+    }
+    buffer = Buffer.from(await file.arrayBuffer());
+  } else {
+    throw new Error("File tidak ditemukan");
+  }
 
   // Duration
   const meta = await parseBuffer(buffer, "audio/mpeg");
@@ -61,6 +104,7 @@ export async function createDefaultMusicAction(formData: FormData) {
       : Math.round(buffer.length / (16 * 1024));
 
   if (duration < 5 || duration > 600) {
+    if (tempKey) await deleteFromR2(tempKey).catch(() => {});
     throw new Error("Durasi musik harus antara 5 detik - 10 menit");
   }
 
@@ -74,6 +118,7 @@ export async function createDefaultMusicAction(formData: FormData) {
     .maybeSingle();
 
   if (exists) {
+    if (tempKey) await deleteFromR2(tempKey).catch(() => {});
     throw new Error("File musik ini sudah ada di library");
   }
 
@@ -87,19 +132,25 @@ export async function createDefaultMusicAction(formData: FormData) {
 
   const nextSortOrder = (maxOrder?.sort_order ?? -1) + 1;
 
-  // 5. Upload & Insert (Transaction-like)
+  // 5. Finalize Storage
   const fileId = randomUUID();
-  const key = `default-music/${fileId}.mp3`;
+  const finalKey = `default-music/${fileId}.mp3`;
   const baseUrl = (process.env.NEXT_PUBLIC_R2_DOMAIN || "").replace(/\/$/, "");
-  const fileUrl = `${baseUrl}/${key}`;
+  const fileUrl = `${baseUrl}/${finalKey}`;
 
   try {
-    // Upload to R2
-    await uploadToR2({
-      key,
-      body: buffer,
-      contentType: "audio/mpeg",
-    });
+    if (tempKey) {
+      // Move from temp to final
+      await copyObject(tempKey, finalKey);
+      await deleteFromR2(tempKey);
+    } else {
+      // Upload directly from buffer
+      await uploadToR2({
+        key: finalKey,
+        body: buffer,
+        contentType: "audio/mpeg",
+      });
+    }
 
     // Insert to DB
     const { error } = await supabase.from("journal_default_music").insert({
@@ -115,12 +166,13 @@ export async function createDefaultMusicAction(formData: FormData) {
 
     if (error) {
       // Rollback R2
-      await deleteFromR2(key);
+      await deleteFromR2(finalKey);
       throw new Error(error.message);
     }
   } catch (err: any) {
     // Ensure cleanup if something unexpected happens
-    await deleteFromR2(key).catch(() => {});
+    await deleteFromR2(finalKey).catch(() => {});
+    if (tempKey) await deleteFromR2(tempKey).catch(() => {});
     throw new Error(err.message || "Internal Server Error");
   }
 
@@ -148,6 +200,7 @@ export async function updateDefaultMusicAction(formData: FormData) {
   const description = String(formData.get("description") ?? "");
   const isPremiumOnly = formData.get("is_premium_only") === "on";
   const file = formData.get("file") as File | null;
+  const tempKey = formData.get("tempKey") as string | null;
 
   const updates: any = {
     title,
@@ -155,12 +208,19 @@ export async function updateDefaultMusicAction(formData: FormData) {
     is_premium_only: isPremiumOnly,
   };
 
-  if (file && file.size > 0) {
-    if (file.type !== "audio/mpeg") {
-      throw new Error("Format file harus MP3");
-    }
+  if ((file && file.size > 0) || tempKey) {
+    let buffer: Buffer;
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    if (tempKey) {
+      buffer = await getObject(tempKey);
+    } else if (file && file.size > 0) {
+      if (file.type !== "audio/mpeg") {
+        throw new Error("Format file harus MP3");
+      }
+      buffer = Buffer.from(await file.arrayBuffer());
+    } else {
+      throw new Error("File tidak ditemukan");
+    }
 
     // Duration
     const meta = await parseBuffer(buffer, "audio/mpeg");
@@ -170,6 +230,7 @@ export async function updateDefaultMusicAction(formData: FormData) {
         : Math.round(buffer.length / (16 * 1024));
 
     if (duration < 5 || duration > 600) {
+      if (tempKey) await deleteFromR2(tempKey).catch(() => {});
       throw new Error("Durasi musik harus antara 5 detik - 10 menit");
     }
 
@@ -185,6 +246,7 @@ export async function updateDefaultMusicAction(formData: FormData) {
       .maybeSingle();
 
     if (exists) {
+      if (tempKey) await deleteFromR2(tempKey).catch(() => {});
       throw new Error("File musik ini sudah ada di library");
     }
 
@@ -195,26 +257,30 @@ export async function updateDefaultMusicAction(formData: FormData) {
       .eq("id", id)
       .single();
 
-    // Upload new
+    // Finalize storage
     const fileId = randomUUID();
-    const key = `default-music/${fileId}.mp3`;
+    const finalKey = `default-music/${fileId}.mp3`;
     const baseUrl = (process.env.NEXT_PUBLIC_R2_DOMAIN || "").replace(
       /\/$/,
       "",
     );
-    const fileUrl = `${baseUrl}/${key}`;
+    const fileUrl = `${baseUrl}/${finalKey}`;
 
-    await uploadToR2({
-      key,
-      body: buffer,
-      contentType: "audio/mpeg",
-    });
+    if (tempKey) {
+      await copyObject(tempKey, finalKey);
+      await deleteFromR2(tempKey);
+    } else {
+      await uploadToR2({
+        key: finalKey,
+        body: buffer,
+        contentType: "audio/mpeg",
+      });
+    }
 
     // Add to updates
     updates.file_url = fileUrl;
     updates.duration_seconds = duration;
     updates.file_hash = fileHash;
-    // Update code too? Maybe not necessary to change code, but if we want consistent slugs:
     updates.code = `${slugify(title)}_${fileId.slice(0, 6)}`;
 
     // Delete old file
