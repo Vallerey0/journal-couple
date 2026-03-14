@@ -61,7 +61,7 @@ export function CompleteButton() {
         className="relative group overflow-hidden rounded-full bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-lg shadow-orange-500/20 h-9 px-4 text-xs font-semibold"
       >
         <Link href="/couple/edit#profile">
-          <span className="relative z-10">Complete</span>
+          <span className="relative z-10">Lengkapi</span>
           {/* Moving shine effect */}
           <span className="animate-shine absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-20deg]" />
         </Link>

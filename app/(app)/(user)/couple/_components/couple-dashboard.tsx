@@ -21,11 +21,15 @@ import { CompleteButton } from "./complete-button";
 type RelationshipStage = "dating" | "engaged" | "married";
 
 type Couple = {
+  id: string;
   male_name: string;
   female_name: string;
 
   male_nickname?: string | null;
   female_nickname?: string | null;
+
+  male_photo_url?: string | null;
+  female_photo_url?: string | null;
 
   male_birth_date?: string | null;
   female_birth_date?: string | null;
@@ -135,8 +139,11 @@ export function CoupleDashboard({ couple, locked = false }: Props) {
 
         <div className="relative z-10 flex flex-col items-center">
           <CoupleAvatar
+            coupleId={couple.id}
             maleName={couple.male_name}
             femaleName={couple.female_name}
+            malePhotoUrl={couple.male_photo_url}
+            femalePhotoUrl={couple.female_photo_url}
           />
 
           <div className="mt-4 space-y-1">
@@ -191,10 +198,10 @@ export function CoupleDashboard({ couple, locked = false }: Props) {
               </div>
               <div>
                 <p className="font-bold text-orange-900 text-sm">
-                  Profile Incomplete
+                  Profil Belum Lengkap
                 </p>
                 <p className="text-orange-800/70 text-xs">
-                  Add details to enrich your journal
+                  Lengkapi data untuk memperkaya jurnal kalian
                 </p>
               </div>
             </div>

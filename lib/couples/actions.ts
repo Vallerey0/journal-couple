@@ -217,6 +217,9 @@ export async function saveCouple(formData: FormData): Promise<void> {
       female_name,
     );
     await supabase.from("couples").insert({ ...payload, slug });
+
+    revalidatePath("/couple");
+    redirect("/couple?new=true");
   }
 
   revalidatePath("/couple");

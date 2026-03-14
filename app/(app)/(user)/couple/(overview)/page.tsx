@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 import { CoupleEmpty } from "../_components/couple-empty";
 import { CoupleDashboard } from "../_components/couple-dashboard";
 import { CoupleMissingPopup } from "../_components/couple-missing-popup";
+import { CoupleReadyModal } from "../_components/couple-ready-modal";
 
 export default async function CouplePage() {
   const supabase = await createClient();
@@ -65,6 +66,7 @@ export default async function CouplePage() {
   /* ================= MAIN ================= */
   return (
     <div className="relative w-full">
+      <CoupleReadyModal slug={couple.slug} />
       <div className="relative z-10 pt-2 space-y-6">
         {showSubscribeBanner && <SubscribeBanner />}
         <CoupleDashboard couple={couple} locked={!subscriptionAllowed} />
