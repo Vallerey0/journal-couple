@@ -9,14 +9,13 @@ export function createMiddlewareClient(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return req.cookies.get(name)?.value;
+        getAll() {
+          return req.cookies.getAll();
         },
-        set(name: string, value: string, options) {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options) {
-          response.cookies.set({ name, value: "", ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
         },
       },
     }
