@@ -105,6 +105,7 @@ export default async function BillingPage() {
     )
     .eq("user_id", user.id)
     .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -187,12 +188,12 @@ export default async function BillingPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 mb-6">
                 <div className="p-3 rounded-2xl bg-white/50 dark:bg-white/5 border border-white/20 dark:border-white/10">
                   <p className="text-xs text-muted-foreground font-medium mb-1">
                     Jumlah Tagihan
                   </p>
-                  <p className="text-2xl font-bold bg-gradient-to-br from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent">
+                  <p className="text-xl sm:text-2xl font-bold bg-gradient-to-br from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-400 bg-clip-text text-transparent break-words">
                     {formatIDR(Number(pendingIntent.final_price_idr))}
                   </p>
                 </div>

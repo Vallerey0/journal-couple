@@ -1,12 +1,19 @@
 import { redirect } from "next/navigation";
-import { getActiveCouple } from "@/lib/couples/queries";
-import { CoupleForm } from "../_components/couple-form";
+import { getActiveCouple, getArchivedCouples } from "@/lib/couples/queries";
+import { CoupleForm } from "../../_components/couple-form";
 
-export default async function EditCouplePage() {
+export default async function NewCouplePage() {
   const couple = await getActiveCouple();
 
-  if (!couple) {
-    redirect("/couple/new");
+  // tidak boleh create kalau sudah ada couple aktif
+  if (couple) {
+    redirect("/couple");
+  }
+
+  // tidak boleh create kalau sudah ada arsip (satu couple policy)
+  const archivedCouples = await getArchivedCouples();
+  if (archivedCouples.length > 0) {
+    redirect("/couple/restore");
   }
 
   return (
@@ -21,14 +28,14 @@ export default async function EditCouplePage() {
       <div className="relative z-10 space-y-6 pt-4">
         <header className="space-y-1 px-1">
           <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-2xl font-bold text-transparent">
-            Lengkapi Cerita Hubungan
+            Mulai Cerita Baru
           </h1>
           <p className="text-sm text-muted-foreground">
-            Kamu bisa melengkapi semua detail hubungan di sini
+            Isi informasi dasar hubungan kalian
           </p>
         </header>
 
-        <CoupleForm mode="edit" couple={couple} />
+        <CoupleForm mode="create" />
       </div>
     </div>
   );
