@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { cancelPendingIntentAction } from "../cancel-action";
+import { cancelPendingIntentAction } from "@/lib/cancel-intent-action";
 
 export function CancelPaymentButton({ intentId }: { intentId: string }) {
   const [isPending, startTransition] = useTransition();
