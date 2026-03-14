@@ -2,8 +2,6 @@ import { getActiveCouple, getArchivedCouples } from "@/lib/couples/queries";
 import { createClient } from "@/lib/supabase/server";
 import { computePlanStatus } from "@/utils/plan";
 import { Metadata } from "next";
-import { Suspense } from "react";
-import { CoupleSkeleton } from "@/components/skeleton/couple-skeleton";
 
 import { SubscribeBanner } from "@/components/user/subscribe-banner";
 
@@ -15,7 +13,7 @@ import { CoupleEmpty } from "../_components/couple-empty";
 import { CoupleDashboard } from "../_components/couple-dashboard";
 import { CoupleMissingPopup } from "../_components/couple-missing-popup";
 
-async function CoupleContent() {
+export default async function CouplePage() {
   const supabase = await createClient();
 
   /* ================= AUTH ================= */
@@ -72,13 +70,5 @@ async function CoupleContent() {
         <CoupleDashboard couple={couple} locked={!subscriptionAllowed} />
       </div>
     </div>
-  );
-}
-
-export default function CouplePage() {
-  return (
-    <Suspense fallback={<CoupleSkeleton />}>
-      <CoupleContent />
-    </Suspense>
   );
 }

@@ -6,8 +6,6 @@ import { PaymentCountdown } from "@/components/user/payment-countdown";
 import { formatDateID } from "@/utils/duration";
 import { computePlanStatus } from "@/utils/plan";
 import { Metadata } from "next";
-import { Suspense } from "react";
-import { SettingsSkeleton } from "@/components/skeleton/settings-skeleton";
 import {
   User,
   CreditCard,
@@ -53,7 +51,7 @@ function joinName(row: RowWithPlanName, fallback = "Premium") {
 }
 
 /* ================= Page ================= */
-async function SettingsContent() {
+export default async function SettingsPage() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   const user = auth.user;
@@ -521,13 +519,5 @@ async function SettingsContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function SettingsPage() {
-  return (
-    <Suspense fallback={<SettingsSkeleton />}>
-      <SettingsContent />
-    </Suspense>
   );
 }
