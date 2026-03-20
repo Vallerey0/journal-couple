@@ -38,6 +38,9 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --radius-sm: calc(var(--radius) - 4px);
+
+  --font-great-vibes: var(--font-great-vibes);
+  --font-playfair: var(--font-playfair);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
@@ -96,6 +99,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --font-great-vibes: "GreatVibes", cursive;
+  --font-playfair: "PlayfairDisplay", serif;
 }
 
 .dark {

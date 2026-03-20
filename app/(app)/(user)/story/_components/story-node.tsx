@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { motion } from "framer-motion";
 import { Lock } from "lucide-react";
 import Image from "next/image";
@@ -14,7 +13,6 @@ interface StoryNodeProps {
   position: "left" | "right";
   data?: StoryData | null;
   onClick: () => void;
-  onLongPress?: () => void;
   index: number;
   xOffset?: number;
   priority?: boolean;
@@ -26,7 +24,6 @@ export function StoryNode({
   position,
   data,
   onClick,
-  onLongPress,
   index,
   xOffset = 0,
   priority = false,
@@ -65,12 +62,14 @@ export function StoryNode({
           </h3>
           {isLocked ? (
             <p className="text-xs text-muted-foreground italic mt-1 group-hover:text-primary transition-colors">
-              Tap to unlock...
+              Ketuk untuk isi...
             </p>
           ) : (
             <>
               <p className="text-xs font-medium text-primary mt-0.5">
-                {format(new Date(data!.story_date), "d MMMM yyyy")}
+                {data?.story_date
+                  ? format(new Date(data.story_date), "d MMMM yyyy")
+                  : "Tanggal belum diisi"}
               </p>
               <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                 {data!.story}

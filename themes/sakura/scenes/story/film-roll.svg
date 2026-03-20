@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 360" fill="none">
+  <defs>
+    <linearGradient id="filmGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2A2A2A" />
+      <stop offset="50%" stop-color="#1E1E1E" />
+      <stop offset="100%" stop-color="#2A2A2A" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="120" height="360" rx="10" fill="url(#filmGrad)" />
+  <rect x="14" y="18" width="92" height="324" rx="10" fill="#0F0F0F" opacity="0.55" />
+
+  <g opacity="0.85" fill="#EAEAEA">
+    <rect x="6" y="18" width="8" height="12" rx="2" />
+    <rect x="106" y="18" width="8" height="12" rx="2" />
+    <rect x="6" y="38" width="8" height="12" rx="2" />
+    <rect x="106" y="38" width="8" height="12" rx="2" />
+    <rect x="6" y="58" width="8" height="12" rx="2" />
+    <rect x="106" y="58" width="8" height="12" rx="2" />
+    <rect x="6" y="78" width="8" height="12" rx="2" />
+    <rect x="106" y="78" width="8" height="12" rx="2" />
+    <rect x="6" y="98" width="8" height="12" rx="2" />
+    <rect x="106" y="98" width="8" height="12" rx="2" />
+    <rect x="6" y="118" width="8" height="12" rx="2" />
+    <rect x="106" y="118" width="8" height="12" rx="2" />
+    <rect x="6" y="138" width="8" height="12" rx="2" />
+    <rect x="106" y="138" width="8" height="12" rx="2" />
+    <rect x="6" y="158" width="8" height="12" rx="2" />
+    <rect x="106" y="158" width="8" height="12" rx="2" />
+    <rect x="6" y="178" width="8" height="12" rx="2" />
+    <rect x="106" y="178" width="8" height="12" rx="2" />
+    <rect x="6" y="198" width="8" height="12" rx="2" />
+    <rect x="106" y="198" width="8" height="12" rx="2" />
+    <rect x="6" y="218" width="8" height="12" rx="2" />
+    <rect x="106" y="218" width="8" height="12" rx="2" />
+    <rect x="6" y="238" width="8" height="12" rx="2" />
+    <rect x="106" y="238" width="8" height="12" rx="2" />
+    <rect x="6" y="258" width="8" height="12" rx="2" />
+    <rect x="106" y="258" width="8" height="12" rx="2" />
+    <rect x="6" y="278" width="8" height="12" rx="2" />
+    <rect x="106" y="278" width="8" height="12" rx="2" />
+    <rect x="6" y="298" width="8" height="12" rx="2" />
+    <rect x="106" y="298" width="8" height="12" rx="2" />
+    <rect x="6" y="318" width="8" height="12" rx="2" />
+    <rect x="106" y="318" width="8" height="12" rx="2" />
+    <rect x="6" y="338" width="8" height="12" rx="2" />
+    <rect x="106" y="338" width="8" height="12" rx="2" />
+  </g>
+
+</svg>

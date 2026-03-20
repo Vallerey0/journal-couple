@@ -1,6 +1,6 @@
 import { StaticImageData } from "next/image";
 import aether from "./aether/theme.config";
-import fire from "./sakura/theme.config";
+import sakura from "./sakura/theme.config";
 
 export type Theme = {
   code: string;
@@ -15,7 +15,7 @@ export type Theme = {
   Preview: React.ComponentType<any>;
 };
 
-const THEMES: Theme[] = [aether, fire];
+const THEMES: Theme[] = [aether, sakura];
 
 export const getThemes = (): Theme[] => THEMES;
 

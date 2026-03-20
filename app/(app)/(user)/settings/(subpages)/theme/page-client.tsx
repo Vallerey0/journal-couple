@@ -16,20 +16,26 @@ type Props = {
   currentTheme: string;
 };
 
-const CATEGORIES = [
-  { id: "all", label: "All" },
-  { id: "minimalist", label: "Minimalist" },
-  { id: "dark", label: "Dark" },
-  { id: "animated", label: "Animated" },
-  { id: "premium", label: "Premium" },
-];
-
 export default function ThemeClientPage({
   themes,
   subscription,
   currentTheme,
 }: Props) {
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  // Dynamically extract all unique tags from themes
+  const dynamicTags = Array.from(
+    new Set(themes.flatMap((theme) => theme.tags)),
+  ).sort();
+
+  const categories = [
+    { id: "all", label: "Semua" },
+    ...dynamicTags.map((tag) => ({
+      id: tag.toLowerCase(),
+      label: tag,
+    })),
+    { id: "premium", label: "Premium" },
+  ];
 
   const filteredThemes = themes.filter((theme) => {
     if (selectedCategory === "all") return true;
@@ -64,7 +70,7 @@ export default function ThemeClientPage({
         {/* Categories */}
         <div className="flex justify-center">
           <div className="flex gap-2 overflow-x-auto pb-2 p-1 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-2xl border border-white/20 max-w-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}

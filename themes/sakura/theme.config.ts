@@ -7,9 +7,9 @@ const theme = {
   version: "1.0.0",
   description: "Bold and passionate with warm colors and dynamic animations.",
   isPremium: true,
-  tags: ["Minimalist", "Soft"],
+  tags: ["Cute", "Soft"],
   author: "Journal Couple",
-  releaseAt: "20-04-2026",
+  releaseAt: "15-03-2026",
   thumbnail: cover,
   Preview,
 };

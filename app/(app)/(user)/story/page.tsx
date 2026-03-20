@@ -4,8 +4,8 @@ import { StoryTimeline } from "./_components/story-timeline";
 import { guardFeatureAccess } from "@/lib/subscriptions/guard";
 
 export const metadata: Metadata = {
-  title: "Our Story",
-  description: "The timeline of our journey together.",
+  title: "Cerita Kita",
+  description: "Linimasa perjalanan kita bersama.",
 };
 
 export default async function StoryPage() {
@@ -24,10 +24,10 @@ export default async function StoryPage() {
 
       <div className="relative z-10 pt-8 px-6 text-center space-y-2">
         <h1 className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-2xl font-bold text-transparent">
-          Our Journey
+          Perjalanan Kita
         </h1>
         <p className="text-sm text-muted-foreground">
-          Every step of our story, woven together.
+          Setiap langkah kisah kita, terajut bersama.
         </p>
       </div>
 
